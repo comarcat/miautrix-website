@@ -16,7 +16,9 @@ paths:
 - **Authorization is a Policy, never an inline check.** Filament calls the model's Policy
   automatically; if a resource needs a rule, the rule goes in the Policy so the public site and the
   API surface get it too.
-- Every panel route is behind `auth` **and** `EnsureTwoFactorEnabled`. A resource may not opt out.
+- Every panel route is behind `auth` **and** `EnsureMfaConfirmed`. A resource may not opt out.
+- `SoftwareProject` is a relation manager on `ProjectResource`, never a standalone
+  `SoftwareProjectResource.php` file.
 - Validation rules that also apply outside the panel live in the FormRequest; the Filament schema
   mirrors them, it does not own them.
 - Destructive bulk actions must state the action and the selected count in the confirmation, and must

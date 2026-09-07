@@ -28,7 +28,7 @@ Thumbs.db
 
 # Local infrastructure state and generated release artifacts
 /infra/.state
-/storage/app/private/media
+/storage/app/private-media
 /storage/backups
 *.tar.gz
 

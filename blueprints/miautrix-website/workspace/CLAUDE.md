@@ -1,17 +1,17 @@
 # miautrix-website
 
-Self-hosted IT portfolio platform: a fast public site backed by a Filament admin CMS, run by exactly
-one administrator. The application is itself a portfolio piece — architecture, CI and security posture
+Self-hosted IT portfolio, lightweight CMS, and blog for one administrator, built on Laravel +
+Filament. The application is itself a portfolio piece — architecture, CI/CD, and security posture
 are part of the deliverable.
 
 ## Commands
 
 | Task | Command |
 |---|---|
-| Local services up | `docker compose up -d --wait` |
-| Local services down | `docker compose down` |
+| Local Postgres up | `docker compose up -d` |
+| Local Postgres down | `docker compose down` |
 | Install PHP deps | `composer install` |
-| Install JS deps | `npm ci` |
+| Install JS deps | `npm install` |
 | Dev server | `php artisan serve` — http://127.0.0.1:8000 |
 | Asset watch | `npm run dev` |
 | Build | `npm run build` |
@@ -19,38 +19,45 @@ are part of the deliverable.
 | Format write | `./vendor/bin/pint` |
 | Static analysis | `./vendor/bin/phpstan analyse` |
 | Tests | `./vendor/bin/pest` · one file: `./vendor/bin/pest tests/Feature/X.php` |
-| Migrate | `php artisan migrate --force` |
-| Seed | `php artisan db:seed --force` |
-| Routes | `php artisan route:list` |
-| Queue worker | `php artisan queue:work` |
+| Migrate | `php artisan migrate` |
+| Seed | `php artisan db:seed` |
+| SEO audit | `php artisan seo:audit` |
+| Queue worker | `php artisan queue:work` (supervised in production, never Horizon) |
 | Deploy | `bash infra/deploy.sh` |
+| Backup / restore drill | `bash infra/backup.sh --restore-to-scratch-and-verify` |
 
 **Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build`
 must pass before any task is marked done.
 
-`php artisan` boots the framework, which loads `.env`. Shell scripts under `scripts/` and `infra/`
-load it themselves with `set -a; . ./.env; set +a` — never assume a variable is exported.
-Dependency versions live in `composer.lock` and `package-lock.json`. Read them; never guess one.
+`php artisan` boots the framework, which loads `.env`. Dependency versions live in `composer.lock`
+and `package-lock.json` — read them, never guess one.
 
 ## Stack
 
-Laravel · PHP 8.4+ · Livewire 4 · Filament 5 admin · Blade + Tailwind v4 + Alpine · Vite · PostgreSQL 18
-· Redis 8 · Eloquent · Fortify (TOTP MFA) + spatie/laravel-permission · Pest · Pint · Larastan ·
-self-hosted on a Debian 13 LXC behind Nginx and Cloudflare.
+Laravel 13 · PHP `^8.4` (hard floor — Pest `^5.1` requires it, not Laravel) · Livewire 4 · Filament 5
+admin · Blade + Tailwind CSS v4 + Alpine.js · Vite · PostgreSQL 18 · Eloquent (no repository layer) ·
+Fortify (native TOTP MFA) + spatie/laravel-permission · spatie/laravel-medialibrary ·
+spatie/laravel-sitemap · Pest · Pint · Larastan · self-hosted on a Debian 13 LXC behind Nginx and
+Cloudflare.
 
-**PHP 8.4 is a hard floor** — Pest 5 requires `^8.4` even though Laravel 13 accepts `^8.3`.
-**Livewire and Filament move together**: Filament 5 requires Livewire `^4.1`. Never upgrade one alone.
+**No Redis.** Queue, cache, and session all use Laravel's `database` driver. A supervised
+`php artisan queue:work` replaces a Horizon dashboard — there is no queue UI in v1. Never add
+`predis/predis` or `laravel/horizon`.
+
+**Filament 5 requires Livewire `^4.1`; pinned Livewire is `^4.4`.** Upgrade them together, never one alone.
 
 ## Architecture
 
 **Public request path.** browser → Nginx → `public/index.php` → `routes/web.php` →
-`app/Http/Controllers/Public/*Controller.php` → Eloquent model → PostgreSQL, rendered by
-`resources/views/pages/*.blade.php` inside `resources/views/components/layouts/app.blade.php`.
-Cacheable GET responses pass through `app/Http/Middleware/CachePublicResponse.php` (Redis).
+`app/Http/Controllers/Public/*Controller.php` → Eloquent model (only `published = true` rows) →
+`resources/views/public/*.blade.php`, inside `resources/views/layouts/app.blade.php`. The theme
+(`data-theme` on `<html>`) is resolved server-side by `app/Http/Middleware/ResolveTheme.php` from
+the `miautrix_theme` cookie — never client-only.
 
-**Admin request path.** browser → `/admin` → Filament panel (`app/Providers/Filament/AdminPanelProvider.php`)
-→ `app/Filament/Resources/*` → Eloquent. Every panel route is behind `auth` **and**
-`app/Http/Middleware/EnsureTwoFactorEnabled.php`.
+**Admin request path.** browser → `/admin` → Filament panel
+(`app/Providers/Filament/AdminPanelProvider.php`) → `app/Filament/Resources/*` → Eloquent. Every
+panel route sits behind `auth` **and** `app/Http/Middleware/EnsureMfaConfirmed.php` — MFA is
+mandatory, never optional.
 
 **Boundaries.**
 
@@ -59,79 +66,68 @@ Cacheable GET responses pass through `app/Http/Middleware/CachePublicResponse.ph
 | `routes/**`, `app/Http/Controllers/**` | Actions, models, FormRequests, Policies | Inline `$request->validate()` or inline role checks |
 | `app/Http/Requests/**` | validation rules only | Touch the database beyond `exists`/`unique` |
 | `app/Actions/**` | models, other Actions | Reference the HTTP request or a Blade view |
-| `app/Filament/**` | models, Actions, Policies | Reimplement validation that a FormRequest owns |
-| `resources/views/**` | components, view data | Query the database |
+| `app/Filament/**` | models, Actions, Policies | Reimplement validation a FormRequest owns |
+| `resources/views/**` | shared components, view data | Query the database directly |
 
 **Where things live.**
 
 | Concern | Single source of truth |
 |---|---|
 | Schema | `database/migrations/` — generated by `php artisan make:migration`, never hand-named |
-| Required env vars | `config/required_env.php` — validated at boot, degrades by build step |
-| Design tokens | `resources/css/app.css` — no raw hex or px anywhere else |
-| Authorization | `app/Policies/*` via `spatie/laravel-permission`. Never an inline `if` |
-| Uploads | `app/Rules/SafeUpload.php` + `app/Http/Controllers/MediaController.php` |
-| SEO meta | `resources/views/components/seo/meta.blade.php` |
+| Design tokens | `resources/css/app.css` (`@theme` block) — no raw hex or px anywhere else |
+| Authorization | `app/Policies/*` via `spatie/laravel-permission` — never an inline `if` |
+| Uploads | `app/Rules/AllowedMediaMime.php` + `app/Http/Controllers/Public/MediaController.php` |
+| SEO meta | `resources/views/components/meta.blade.php` |
+| SoftwareProject | a Filament **relation manager** on `ProjectResource` — never a standalone resource file |
 
 ## Code rules
 
-1. **Validation in FormRequests, authorization in Policies.** A controller that inlines either is a
-   defect, not a shortcut.
-2. **No repository layer over Eloquent.** Real domain logic goes in `app/Actions/` as a class with one
-   public method. `app/Services/` is only for external-integration clients.
+1. **Validation in FormRequests, authorization in Policies.** A controller that inlines either is a defect.
+2. **No repository layer over Eloquent.** Domain logic goes in `app/Actions/`, one public method per class. `app/Services/` is reserved for external-API clients (none in v1).
 3. **Every model declares `$fillable` explicitly.** `$guarded = []` is banned.
-4. **Filament resources are generated then edited**: `php artisan make:filament-resource X --generate`.
-   Never hand-written from scratch.
-5. **Livewire re-renders on every action.** Use `wire:model.blur` by default and `#[Computed]` for
-   derived data. `wire:model.live` needs a comment justifying it.
-6. **Max 250 lines per Livewire component and per Filament resource.** Longer means split it.
-7. **Every publishable entity has `slug`, `published`, `featured`, `sort_order`, SEO fields and
-   soft deletes.** A public query filters `published` and `deleted_at`; there is no exception.
-8. **No new dependency without a reason in the commit message.** Check the framework first.
-9. **Icons are Heroicons or Lucide SVG. Never emoji.**
+4. **Filament resources are generated then edited**: `php artisan make:filament-resource X --generate`. Never hand-written from scratch.
+5. **Livewire re-renders on every action.** Use `wire:model.blur` by default; `wire:model.live` needs a comment justifying it.
+6. **Max 250 lines per Livewire component and per Filament resource file.** Longer means split it.
+7. **Every publishable entity has `slug`, `published`, `featured`, `sort_order`, 6 SEO fields, and soft deletes.** Every public query filters `published` and `deleted_at`, no exception.
+8. **No SVG upload, ever.** Allowed types: JPEG, PNG, WebP, PDF, DOCX, ZIP.
+9. **No new dependency without a reason in the commit message.** Check the framework first.
+10. **Icons are Heroicons or Lucide SVG. Never emoji.**
 
 ## Design system
 
-Direction: technical / precise, Swiss minimalism. Sharp corners, dense, monospace for metadata.
-Tokens are defined once in `resources/css/app.css` on `:root`, redefined under
-`@media (prefers-color-scheme: dark)` guarded as `:root:not([data-theme="light"])`, and again under
-`:root[data-theme="dark"]` so the manual toggle wins in both directions.
+Two shared-component themes: **Technical** (default, respects `prefers-color-scheme`) and **Matrix**
+(always dark, overrides system preference). One Blade component tree serves both — tokens differ via
+`[data-theme]`, never a second component directory.
 
-| Role | Light | Dark |
-|---|---|---|
-| `--color-background` | `#FAFAFA` | `#09090B` |
-| `--color-foreground` | `#09090B` | `#FAFAFA` |
-| `--color-card` | `#FFFFFF` | `#111113` |
-| `--color-primary` | `#18181B` | `#FAFAFA` |
-| `--color-on-primary` | `#FFFFFF` | `#09090B` |
-| `--color-secondary` | `#3F3F46` | `#A1A1AA` |
-| `--color-accent` | `#2563EB` | `#3B82F6` |
-| `--color-accent-text` | `#2563EB` | `#60A5FA` |
-| `--color-muted` | `#E8ECF0` | `#1C1C1F` |
-| `--color-muted-foreground` | `#475569` | `#A1A1AA` |
-| `--color-border` | `#E4E4E7` | `#27272A` |
-| `--color-destructive` | `#DC2626` | `#F87171` |
-| `--color-ring` | `#2563EB` | `#60A5FA` |
+| Role | Technical Light | Technical Dark | Matrix (always) |
+|---|---|---|---|
+| `--color-background` | `#FAFAFA` | `#09090B` | `#000000` |
+| `--color-foreground` | `#09090B` | `#FAFAFA` | `#E0E0E0` |
+| `--color-primary` | `#18181B` | `#FAFAFA` | `#00FF41` |
+| `--color-accent` / `--color-accent-text` | `#2563EB` | `#3B82F6` / `#60A5FA` | `#00FF41` |
+| `--color-destructive` | `#DC2626` | `#F87171` | `#EF4444` |
+| `--color-ring` | `#2563EB` | `#60A5FA` | `#00FF41` |
 
-- **Type:** UI/body `IBM Plex Sans` 300/400/500/600/700; metadata, labels, badges and code
-  `JetBrains Mono` 400/500/600/700. Both **self-hosted** woff2 from `public/fonts/` with
-  `font-display: swap`. Zero requests to `fonts.googleapis.com` in any environment.
-- **Scale:** 12 / 14 / 16 / 18 / 24 / 32 / 48 px. Body 16px, line-height 1.5.
-- **Spacing:** 4 / 8 / 12 / 16 / 24 / 32 / 48 / 64 px. No arbitrary values.
-- **Radius:** 2px inputs and badges, 4px cards and buttons. Nothing rounder.
-- **Elevation:** flat — borders only.
-- **Motion:** 200–350ms, ease-out. Transform and opacity only. Scroll reveal is opacity + 12px
-  translate via IntersectionObserver, no GSAP. `prefers-reduced-motion: reduce` renders the final
-  state immediately.
-- **A11y:** contrast ≥4.5:1, visible focus ring always, labels visible (never placeholder-only),
-  inline errors beside the field, touch targets ≥44×44px, no horizontal body scroll at 375/768/1024/1440.
-- On dark backgrounds use `--color-accent-text`, not `--color-accent`, for link and label text.
+Full token table with every role: blueprint §7. **`#00FF41` (Matrix accent) never colors full-paragraph
+body text** — body copy is always `--color-foreground`. Use `--color-accent-text`, never
+`--color-accent`, for link/label text.
+
+- **Type:** `IBM Plex Sans` 300–700 (UI/body), `JetBrains Mono` 400–700 (metadata/labels/code). Both
+  self-hosted woff2 from `public/fonts/`, `font-display: swap`. Zero third-party font requests.
+- **Scale:** 12/14/16/18/24/32/48px. Body 16px, line-height 1.5.
+- **Spacing:** 4/8/12/16/24/32/48/64px.
+- **Radius:** 8px inputs/buttons, 12px cards, full for avatars/badges.
+- **Motion:** 200–350ms ease-out, transform/opacity only, `prefers-reduced-motion: reduce` skips it.
+- **A11y:** contrast ≥4.5:1, visible focus ring always (Matrix ring must stay visible on `#000000`),
+  labels never placeholder-only, inline errors beside the field, touch targets ≥44×44px, no
+  horizontal body scroll at 375/768/1024/1440px.
 
 ## Environment
 
-`.env.example` is committed with every key present and blank secrets; `.env` never is. Required
-variables are enforced at boot by `config/required_env.php`, which marks a variable required only
-from the build step that consumes it. Local database and Redis come from `docker-compose.yml`.
+`.env.example` is committed with every key present, blank/fake secrets. `.env` is never committed.
+Required variables are enforced at boot, staged by build step — see blueprint §10's "Required by
+step" column. Local Postgres comes from `docker-compose.yml` (port 5433, databases
+`miautrix_website` and `miautrix_test`).
 
 ## Rules
 
@@ -140,28 +136,29 @@ Deferred conventions — read the matching file before editing that area:
 | File | Applies to |
 |---|---|
 | `.claude/rules/database.md` | `database/**`, `app/Models/**` |
-| `.claude/rules/filament.md` | `app/Filament/**`, `app/Policies/**` |
-| `.claude/rules/frontend.md` | `resources/**`, `public/**` |
-| `.claude/rules/security.md` | `app/Http/**`, `config/**`, `infra/**` |
+| `.claude/rules/filament.md` | `app/Filament/**` |
+| `.claude/rules/theming.md` | `resources/css/**`, `resources/views/components/**`, `app/View/Components/**` |
+| `.claude/rules/security.md` | `app/Http/Middleware/**`, `app/Http/Requests/**`, `app/Policies/**` |
 
 ## Build team and workflow
 
 The build is executed by the distributed agent team defined at `C:\dev\dev-team`. The Builder session
-delegates each task to a subagent: `backend-dev` (server logic, APIs, jobs), `uxui-dev` (all UI — it
-**must** invoke the `ui-ux-pro-max` skills before any visual decision), `db-architect` (schema,
-migrations, indexes), `security-auditor` (pre-merge review), `tester` (test strategy and execution).
+delegates each task to a subagent: `backend-dev` (server logic, jobs), `uxui-dev` (all UI — invokes
+`ui-ux-pro-max` skills before visual decisions), `db-architect` (schema, migrations, indexes),
+`security-auditor` (pre-merge review), `tester` (test strategy and execution).
 
 - Branch per task: `task/<id>-<slug>`. Commits: `[<role>] <type>: <summary>`.
-- Build order lives in `blueprints/miautrix-website/tasks.json`; execution detail in
-  `blueprints/miautrix-website/epics/`. Read those, not the blueprint narrative.
+- Build order: `blueprints/miautrix-website/tasks.json`; execution detail:
+  `blueprints/miautrix-website/epics/`. Read those, not the blueprint narrative, during the build.
 - **Definition of Done:** every `verify` command of the task passes, `security-auditor` reports no
   open high-severity finding, and an architect review file records `APROBADO`.
 
 ## Non-negotiable
 
 1. Never commit `.env`, a key, a token, or any real credential.
-2. Never run `php artisan migrate:fresh` outside a local reset — never in a deploy script.
+2. Never run `php artisan migrate:fresh` or `db:wipe` outside a local/test reset — never in a deploy script.
 3. Never accept SVG uploads. Allowed types are JPEG, PNG, WebP, PDF, DOCX, ZIP only.
 4. Never expose Telescope outside `local`, and never remove the MFA requirement on `/admin`.
-5. Never hand-edit a generated migration filename or a file under `vendor/`.
-6. Never mark a task done with a failing gate command.
+5. Never add Redis, `predis/predis`, or `laravel/horizon` — queue/cache/session are `database`-driven.
+6. Never create a standalone `SoftwareProjectResource.php` — it is a relation manager on `ProjectResource`.
+7. Never mark a task done with a failing gate command.

@@ -2,7 +2,7 @@
 
 > After this epic, a scaffolded Laravel app with the full tooling in place has reached the real
 > production domain over HTTPS, protected by GitHub branch rules and a green CI pipeline — before a
-> single feature exists.
+> single content feature exists.
 
 | | |
 |---|---|
@@ -18,53 +18,41 @@ You do not need any other file to complete this epic. Everything below is repeat
 
 ## Stack
 
-Laravel 13 · PHP 8.4+ · Livewire 4 · Tailwind CSS v4 (`@tailwindcss/vite`) · Alpine.js · Vite ·
-PostgreSQL 18 · Redis 8 · Pest 5 · self-hosted on a Debian 13 LXC behind Nginx and Cloudflare.
-Package manager: Composer (PHP) + npm (JS). No runtime version file beyond `composer.json`'s
-`require.php` — PHP 8.4 is enforced there and by Pest's own requirement (`^8.4`), which is stricter
-than Laravel's `^8.3`.
+Laravel 13 (`^13.30`) · PHP `^8.4` (hard floor set by Pest `^5.1`'s own `^8.4` requirement, not by
+Laravel) · Livewire `^4.4` · Filament `^5.7` (installed in epic 03) · Tailwind CSS `^4.3.3` via
+`@tailwindcss/vite` · Alpine.js `^3.17` · Vite `^8.2` · PostgreSQL 18 · Pest `^5.1` · **no Redis** —
+Laravel's database driver handles queue, cache, and session. Self-hosted on a Debian 13 "trixie" LXC
+behind Nginx and Cloudflare. Package manager: Composer (PHP) + npm (JS).
 
 | Task | Command |
 |---|---|
-| Local services up/down | `docker compose up -d --wait` / `docker compose down` |
-| Install | `composer install` · `npm ci` |
-| Dev server | `php artisan serve` |
-| Build | `npm run build` |
-| Format check | `./vendor/bin/pint --test` |
+| Local services up/down | `docker compose up -d` / `docker compose down` |
+| Install | `composer install` · `npm install` |
+| Format | `./vendor/bin/pint --test` |
 | Static analysis | `./vendor/bin/phpstan analyse` |
-| Tests | `./vendor/bin/pest` |
-| Deploy | `bash infra/deploy.sh` |
+| Test (full) | `./vendor/bin/pest` |
+| Build assets | `npm run build` |
+| Dev server | `php artisan serve` |
 
 **Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build`
 passes before any task here is marked done.
 
-If any task below verifies against a real service, start it first with `docker compose up -d --wait`.
-`docker-compose.yml` and every other verify-critical config (`phpstan.neon`, `pint.json`,
-`phpunit.xml`, `.github/workflows/ci.yml`, `.env.example`, `.gitignore`) shipped in this bundle's
-`workspace/` and is already at the project root before task one — you do not write these files, and
-you never substitute a fake for a service the acceptance criteria name.
+The compose file (`docker-compose.yml`, at the project root) and its PostgreSQL 18 service are
+already at the project root before task 1 starts — they ship in the bundle's `workspace/` and are
+copied by Bootstrap. You do not create them; you only start them.
 
 ## Directory subtree
 
-Only the parts this epic touches:
-
 ```
-composer.json  composer.lock  package.json  package-lock.json    # NEW — authored by the scaffold, edited by named commands
-vite.config.js                                                   # NEW
-resources/
-  css/app.css                                                    # NEW — token file, only a minimal @theme stub here (full in epic 04)
-config/
-  required_env.php                                               # NEW — boot validator, only APP_KEY required at this step
-scripts/
-  github-bootstrap.sh              # NEW
-  github-assert-protection.sh      # NEW
-  ci-assert-run.sh                 # NEW
-  assert-lxc.sh                    # NEW
+composer.json           # authored by `laravel new` (E1-T1), then edited by composer require lines
+package.json             # authored by `laravel new --livewire`, then edited by npm install lines
+vite.config.js            # Tailwind v4 plugin wired in E1-T1
+resources/css/app.css      # minimal @import "tailwindcss" in E1-T1 — full @theme tokens land in epic 04
+.github/workflows/ci.yml   # confirmed/edited in E1-T3 — real content already shipped in workspace/
 infra/
-  provision.sh                     # NEW
-  deploy.sh                        # NEW — minimal stub, extended in epic 04's last task
-routes/web.php                     # exists (scaffold default), untouched here beyond what the scaffold writes
-.github/workflows/ci.yml           # exists — shipped in workspace/, this epic is where it's first exercised
+  provision.sh              # NEW in E1-T4
+routes/web.php              # hello-world route added in E1-T5
+resources/views/public/hello.blade.php  # NEW in E1-T5
 ```
 
 Everything outside this subtree is out of scope. If a task seems to require editing a file not
@@ -72,252 +60,221 @@ listed here, stop and report — it means the epic boundary is wrong.
 
 ## Data model touched here
 
-None. Schema work starts in `02-schema-auth`.
+NOT APPLICABLE — no schema work in this epic. Schema starts in `02-schema-auth`.
 
 ## Contracts
 
-**Consumed** — already exists, do not rebuild:
-
-| From | Interface | Guarantee |
-|---|---|---|
-| bundle `workspace/` | `docker-compose.yml`, `.github/workflows/ci.yml`, `phpstan.neon`, `pint.json`, `phpunit.xml`, `.env.example`, `.gitignore` | Real files, already at the project root, matching the values this epic's tasks assert against |
+**Consumed** — nothing; this is the first epic.
 
 **Produced** — later epics depend on exactly these:
 
 | Export | Signature | Used by |
 |---|---|---|
-| `https://$APP_DOMAIN/` | responds `200` over HTTPS | every later epic's deploy-time verification |
-| `main` branch, protected, `ci` required | GitHub branch protection ruleset | every later epic's PR merges |
-| `config/required_env.php` | boot validator, degrades by step (only `APP_KEY` required after this epic) | `02-schema-auth` adds `DB_*`/`REDIS_*` as required |
+| A working Laravel app at the project root, `composer.json`/`package.json` authored | filesystem state | every later epic |
+| `.github/workflows/ci.yml` running composer/npm audits + Pest against a Postgres 18 service | CI gate | every later epic's PR |
+| The production domain, live over HTTPS on the Debian LXC | `https://$APP_DOMAIN/` returns 200 | epic 04's public pages, epic 05's Lighthouse gate |
 
 ## Conventions that bite in this area
 
-- **No `gh` CLI on the build machine.** `E1-T2` uses the GitHub REST API directly via `curl` with
-  `$GITHUB_TOKEN` — do not attempt to install or shell out to `gh`.
-- **Never write a version number here from memory.** Every pin (PHP 8.4, Laravel 13.30, etc.) is
-  already fixed in `blueprint.md` §11 — install exactly those constraints, do not "helpfully" update
-  to a newer minor mid-build.
-- **Migrations never run in this epic** beyond the scaffold's own defaults — there is no schema yet.
-- `infra/deploy.sh` here is a **minimal stub** (rsync + composer install + serve). It gains
-  `migrate --force`, cache warming and the queue restart only once those things exist to warm/restart
-  (epic `04`, task `E4-T7`) — do not front-load them here; the manifest ruling in `blueprint.md` §2/§10
-  applies the same logic to every artifact: a step only gains a capability once its dependency exists.
+- **No Redis.** Never add `predis/predis` or `laravel/horizon` — the queue/cache/session driver is
+  `database` everywhere, confirmed by a grep guard in E1-T1's Verify.
+- **The `gh` CLI is NOT installed** on the build machine — E1-T2 and E1-T3 use the GitHub REST API
+  via `curl` with `$GITHUB_TOKEN`, never `gh`.
+- **`laravel new` may refuse a non-empty target directory** (it has a `.git`) — if so, scaffold into
+  a scratch subdirectory and move the tree up one level, preserving `.git`. State this explicitly.
 
-Full project rules: `CLAUDE.md`. Area rules: `.claude/rules/{database,filament,frontend,security}.md`.
-Both sit in the project root — the builder copied them there from the bundle's `workspace/` before
-task one.
+Full project rules: `CLAUDE.md`. Area rules: `.claude/rules/security.md` for anything touching auth
+later. Both sit in the project root — the builder copied them there from the bundle's `workspace/`
+before task one.
 
 ---
 
 ## Tasks
 
-Listed in the same order as `tasks.json`. Work top to bottom.
-
-### `E1-T1` — Scaffold Laravel and the toolchain
+### `E1-T1` — Scaffold Laravel, Livewire, Pest, tooling, Tailwind v4
 
 **Depends on:** nothing · **Priority:** p0
 
-Run `composer create-project laravel/laravel . --no-interaction --prefer-dist` (this **is** the
-manifest author — `composer.json`/`package.json` come from the scaffold, per `blueprint.md` §2's
-manifest ruling; never hand-write them). Add Livewire, Pest, Pint, Larastan, and the Tailwind v4 +
-Alpine wiring as named `composer require`/`npm install` commands **after** the scaffold line, per
-`blueprint.md` §10's Bootstrap block. Write `resources/css/app.css` with `@import "tailwindcss";`, a
-minimal `@theme` block (full token set lands in epic 04's `E4-T1` — this step only needs the build to
-succeed, not the final palette), and the three `@source` directives so the class scanner skips
-`blueprints/`. Write `config/required_env.php` validating only `APP_KEY` at this point.
+Run `laravel new miautrix-website --livewire --pest --database=pgsql --directory=.` from the project
+root. This authors `composer.json` and `package.json` — do not hand-write either. Add
+`composer require --dev laravel/pint:^1.30 larastan/larastan:^3.11 laravel/telescope:^5.23`, then
+`composer require laravel/boost:^2.7 && php artisan boost:install`. Add
+`npm install tailwindcss@^4.3.3 @tailwindcss/vite@^4.3.3 alpinejs@^3.17` and wire the Vite plugin.
+`phpstan.neon` and `pint.json` are already at the project root from the workspace copy — do not
+recreate them. Confirm no `predis/predis` or `laravel/horizon` ever enters `composer.json`.
 
 **Files**
-- `composer.json`, `composer.lock` — new (scaffold-authored, edited)
-- `package.json`, `package-lock.json` — new (scaffold-authored, edited)
-- `resources/css/app.css` — new
-- `vite.config.js` — new
-- `config/required_env.php` — new
+- `composer.json` — new (authored by `laravel new`, then edited by the `composer require` lines above)
+- `package.json` — new (authored by `laravel new --livewire`, then edited by `npm install`)
+- `vite.config.js` — edit: add the Tailwind v4 Vite plugin
+- `resources/css/app.css` — new: minimal `@import "tailwindcss";`
+- `.env.example` — confirm (already copied from `workspace/`; add any app-specific key this step introduces)
 
 **Acceptance**
 
-1. **WHEN** `composer install --no-interaction` runs on a clean checkout **THE SYSTEM SHALL** exit 0
-   and populate `vendor/` with `laravel/framework`, `livewire/livewire` and `pestphp/pest` at the
-   versions pinned in `blueprint.md` §11.
-2. **WHEN** `./vendor/bin/pint --test` runs on the freshly scaffolded tree **THE SYSTEM SHALL** exit 0.
-3. **WHEN** `./vendor/bin/phpstan analyse` runs **THE SYSTEM SHALL** exit 0 at level 5 over `app`,
-   `config`, `database`, `routes`.
-4. **WHEN** `./vendor/bin/pest` runs **THE SYSTEM SHALL** report the scaffold's own default test
-   passing, 0 failed, 0 skipped.
-5. **WHEN** `npm ci && npm run build` runs **THE SYSTEM SHALL** exit 0 and write a `manifest.json`
-   under `public/build/`.
-6. **WHEN** `php artisan serve` starts and a request hits `/` **THE SYSTEM SHALL** respond `200`.
+1. **WHEN** `./vendor/bin/pint --test` runs **THE SYSTEM SHALL** exit 0.
+2. **WHEN** `./vendor/bin/phpstan analyse` runs **THE SYSTEM SHALL** exit 0 with zero errors at level 5.
+3. **WHEN** `./vendor/bin/pest` runs **THE SYSTEM SHALL** exit 0 with 0 failed and 0 skipped.
+4. **WHEN** `npm run build` runs **THE SYSTEM SHALL** exit 0 and emit `public/build/manifest.json`.
+5. **WHEN** the built server receives a GET to `/` **THE SYSTEM SHALL** return HTTP 200.
+6. **WHEN** `composer.json` is inspected **THE SYSTEM SHALL** contain no `predis/predis` and no `laravel/horizon` entry.
 
 **Verify**
 
 ```bash
-composer install --no-interaction
 ./vendor/bin/pint --test
-./vendor/bin/phpstan analyse --no-progress
+./vendor/bin/phpstan analyse
 ./vendor/bin/pest
-npm ci && npm run build
-test -f public/build/manifest.json
+npm run build
 php artisan serve --port=8123 & SERVE_PID=$!; sleep 1; test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8123/)" = 200; kill "$SERVE_PID"
+! grep -q '"predis/predis"' composer.json
+! grep -q '"laravel/horizon"' composer.json
 ```
 
 **Checkpoint**
 
 ```bash
-git add -A && git commit -m "E1-T1: scaffold laravel + livewire + pest + tailwind v4"
+git add -A && git commit -m "E1-T1: scaffold laravel + livewire + pest + tooling"
 git tag step-01-scaffold
 ```
 
-### `E1-T2` — Git remote and branch protection on GitHub
+### `E1-T2` — Git remote, branches, branch protection via REST API
 
 **Depends on:** `E1-T1` · **Priority:** p0
 
-The project already has a local repo (one commit, `.gitattributes` only) with no remote. `gh` is
-**not installed** on this build machine — use `curl` against the GitHub REST API with
-`$GITHUB_TOKEN` (a fine-grained PAT, `Administration:write` + `Contents:write`, this repo only).
-`scripts/github-bootstrap.sh` creates the repo if it doesn't exist, adds `origin`, pushes `main`,
-creates `develop`. `scripts/github-assert-protection.sh` sets and then reads back a branch-protection
-rule on `main` requiring the `ci` status check. Both scripts must be safe to re-run.
+Add `origin` from `$GITHUB_REPO_URL`, push `main`, create and push `develop`. Use the GitHub REST
+API via `curl` with `$GITHUB_TOKEN` to enable branch protection on `main` (PR required, `ci` status
+check required, no force-push). Never use the `gh` CLI — it is not installed.
 
 **Files**
-- `scripts/github-bootstrap.sh` — new
-- `scripts/github-assert-protection.sh` — new
+- `.git/config` — edit (remote added)
 
 **Acceptance**
 
-1. **WHEN** `bash scripts/github-bootstrap.sh` runs against a repository with no remote **THE
-   SYSTEM SHALL** add `origin`, push `main`, and create `develop`, idempotently.
-2. **WHEN** `bash scripts/github-assert-protection.sh` runs **THE SYSTEM SHALL** confirm `main`
-   requires the `ci` status check before merge.
-3. **WHEN** `GITHUB_TOKEN` is unset **THE SYSTEM SHALL** exit 1 with a named error before making any
-   API call.
-4. **WHEN** `git ls-remote origin main` runs **THE SYSTEM SHALL** resolve a commit hash.
+1. **WHEN** `git remote -v` runs **THE SYSTEM SHALL** list `origin` pointing at the configured repository URL.
+2. **WHEN** `main` is pushed **THE SYSTEM SHALL** be visible at `origin/main`.
+3. **WHEN** `develop` is pushed **THE SYSTEM SHALL** be visible at `origin/develop`.
+4. **WHEN** the branch protection API is queried for `main` **THE SYSTEM SHALL** report `required_pull_request_reviews` present and `required_status_checks.contexts` containing `ci`.
+5. **WHEN** an unauthenticated force-push to `main` is attempted **THE SYSTEM SHALL** be rejected by GitHub.
 
 **Verify**
 
 ```bash
-env -u GITHUB_TOKEN bash scripts/github-bootstrap.sh; test $? -eq 1
-bash scripts/github-bootstrap.sh
 git ls-remote origin main
-bash scripts/github-assert-protection.sh
-bash scripts/github-bootstrap.sh
+curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/branches/main/protection" | jq -e '.required_pull_request_reviews != null and (.required_status_checks.contexts | index("ci")) != null'
 ```
 
 **Checkpoint**
 
 ```bash
-git add -A && git commit -m "E1-T2: github remote + branch protection"
-git tag step-02-github
+git add -A && git commit -m "E1-T2: git remote, branches, branch protection" --allow-empty
+git tag step-02-git-remote
 ```
 
-### `E1-T3` — GitHub Actions CI verified end to end
+### `E1-T3` — GitHub Actions CI with dependency audits
 
 **Depends on:** `E1-T2` · **Priority:** p0
 
-`.github/workflows/ci.yml` already ships in `workspace/`. This task's job is to prove it actually runs
-against the live remote just created: push a throwaway branch, poll the Actions API until the run
-concludes, assert success, then clean up the branch both locally and on the remote.
-`scripts/ci-assert-run.sh` does the polling.
+`.github/workflows/ci.yml` already ships in `workspace/` with the correct content — confirm it
+(PHP 8.4 matrix, Postgres 18 service container only, `composer audit`, `pint --test`,
+`phpstan analyse`, `migrate --force`, `pest --ci`, `npm audit --audit-level=high`, `npm run build`)
+and edit only if a project-specific adjustment is needed.
 
 **Files**
-- `scripts/ci-assert-run.sh` — new
+- `.github/workflows/ci.yml` — confirm/edit
 
 **Acceptance**
 
-1. **WHEN** a commit is pushed to a `task/**` branch **THE SYSTEM SHALL** trigger the `ci` workflow.
-2. **WHEN** the workflow runs **THE SYSTEM SHALL** report every job (Pint, PHPStan, Pest, asset
-   build) passing.
-3. **WHEN** a PR targeting `main` is opened before `ci` finishes **THE SYSTEM SHALL** block merge.
+1. **WHEN** `.github/workflows/ci.yml` is parsed as YAML **THE SYSTEM SHALL** be syntactically valid.
+2. **WHEN** the workflow runs on a pushed branch **THE SYSTEM SHALL** execute `composer audit` and `npm audit --audit-level=high` as distinct steps.
+3. **WHEN** the workflow runs **THE SYSTEM SHALL** use a PostgreSQL 18 service container and no Redis service.
+4. **WHEN** a pushed branch's CI run completes **THE SYSTEM SHALL** report success (all steps exit 0).
+5. **WHEN** `composer audit` finds a high-severity advisory **THE SYSTEM SHALL** fail the workflow (exit non-zero).
 
 **Verify**
 
 ```bash
-git checkout -b task/00-ci-smoke && git commit --allow-empty -m "chore: trigger ci" && git push origin task/00-ci-smoke
-bash scripts/ci-assert-run.sh task/00-ci-smoke
-git checkout main && git branch -D task/00-ci-smoke && git push origin --delete task/00-ci-smoke
+python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/ci.yml'))"
+grep -q "composer audit" .github/workflows/ci.yml
+grep -q "npm audit --audit-level=high" .github/workflows/ci.yml
+! grep -qi "redis" .github/workflows/ci.yml
+git push origin HEAD:ci-smoke-check && curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$(git rev-parse HEAD)/check-runs" | jq -e '[.check_runs[] | select(.name=="ci")][0].conclusion == "success"' && git push origin --delete ci-smoke-check
 ```
 
 **Checkpoint**
 
 ```bash
-git add -A && git commit -m "E1-T3: ci verified end to end"
+git add -A && git commit -m "E1-T3: github actions ci with dependency audits"
 git tag step-03-ci
 ```
 
-### `E1-T4` — Provision the Debian 13 LXC
+### `E1-T4` — Provision Debian 13 LXC
 
-**Depends on:** `E1-T1` · **Priority:** p0
+**Depends on:** `E1-T3` · **Priority:** p0
 
-`infra/provision.sh` runs over SSH against the already-created Proxmox LXC (2 vCPU / 4GB RAM / 30GB
-disk, per the risk register): installs Nginx, PHP-FPM 8.4+, PostgreSQL 18, Redis 8, `supervisor`;
-configures UFW for 22 (restricted), 80, 443 only; binds PostgreSQL and Redis to `127.0.0.1`; tunes
-PHP-FPM `pm.max_children` and PostgreSQL `shared_buffers` for the 4GB envelope. Must be idempotent —
-a second run changes nothing. `scripts/assert-lxc.sh` does the remote read-back.
+Write `infra/provision.sh`, run once over SSH against `$LXC_HOST` with `$LXC_SSH_KEY`. Install and
+enable Nginx, PHP-FPM 8.4+, PostgreSQL 18 (bound to `127.0.0.1`), `supervisor`, UFW restricted to
+80/443 and a restricted SSH port. No Redis on this host.
 
 **Files**
 - `infra/provision.sh` — new
-- `scripts/assert-lxc.sh` — new
 
 **Acceptance**
 
-1. **WHEN** `infra/provision.sh` runs against a fresh Debian 13 LXC **THE SYSTEM SHALL** leave
-   Nginx, PHP-FPM, PostgreSQL, Redis and supervisor all `active (running)`.
-2. **WHEN** a TCP probe from outside the LXC targets port 5432 or 6379 **THE SYSTEM SHALL** fail to
-   connect.
-3. **WHEN** `ufw status` is read on the LXC **THE SYSTEM SHALL** list exactly 22 (restricted), 80,
-   443 as allowed.
-4. **WHEN** `infra/provision.sh` runs a second time on the same LXC **THE SYSTEM SHALL** exit 0 and
-   change nothing.
+1. **WHEN** the remote host is queried for `systemctl is-active nginx` **THE SYSTEM SHALL** report `active`.
+2. **WHEN** queried for `systemctl is-active php8.4-fpm` **THE SYSTEM SHALL** report `active`.
+3. **WHEN** queried for `systemctl is-active postgresql` **THE SYSTEM SHALL** report `active`.
+4. **WHEN** queried for `systemctl is-active supervisor` **THE SYSTEM SHALL** report `active`.
+5. **WHEN** a TCP connection to the LXC's PostgreSQL port is attempted from OFF-HOST **THE SYSTEM SHALL** be refused.
+6. **WHEN** `ufw status` is queried **THE SYSTEM SHALL** show only 80, 443, and the configured SSH port as ALLOW.
 
 **Verify**
 
 ```bash
-bash infra/provision.sh
-bash scripts/assert-lxc.sh
-ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "sudo ufw status | grep -c ALLOW"
-timeout 3 bash -c "echo > /dev/tcp/$DEPLOY_HOST/5432"; test $? -ne 0
-bash infra/provision.sh
+ssh -i "$LXC_SSH_KEY" "root@$LXC_HOST" 'systemctl is-active nginx && systemctl is-active php8.4-fpm && systemctl is-active postgresql && systemctl is-active supervisor'
+timeout 3 bash -c "cat < /dev/null > /dev/tcp/$LXC_HOST/5432" ; test $? -ne 0
+test "$(ssh -i "$LXC_SSH_KEY" "root@$LXC_HOST" 'ufw status | grep -cE "ALLOW"')" -ge 3
 ```
 
 **Checkpoint**
 
 ```bash
 git add -A && git commit -m "E1-T4: provision debian 13 lxc"
-git tag step-04-lxc
+git tag step-04-provision
 ```
 
-### `E1-T5` — Deploy a hello-world release over HTTPS
+### `E1-T5` — Deploy hello-world to production domain over HTTPS
 
 **Depends on:** `E1-T4` · **Priority:** p0
 
-`infra/deploy.sh` — a **minimal** version: rsync the current tree to a timestamped release directory
-under `$DEPLOY_PATH/releases/`, `composer install --no-dev`, symlink `current`, reload PHP-FPM and
-Nginx. Cloudflare DNS is already proxied at the LXC's public IP (confirmed ready by the user). No new
-route — step `E1-T1`'s scaffold welcome page at `/` is the "hello-world".
+Deploy the step-1 scaffold to the LXC: Nginx vhost, PHP-FPM pool, `resources/views/public/hello.blade.php`
+at `/`. Point the production domain at the LXC via Cloudflare (proxied), attach TLS. This is the
+step that proves the site reaches the internet before any feature is built (Risk #3).
 
 **Files**
-- `infra/deploy.sh` — new (minimal; extended in `E4-T7`)
+- `resources/views/public/hello.blade.php` — new
+- `routes/web.php` — edit: hello-world route
 
 **Acceptance**
 
-1. **WHEN** `infra/deploy.sh` runs against the provisioned LXC **THE SYSTEM SHALL** place a release
-   under `$DEPLOY_PATH/releases/`, symlink `current`, and reload Nginx and PHP-FPM.
-2. **WHEN** `curl https://$APP_DOMAIN/` is requested from the build machine **THE SYSTEM SHALL**
-   respond `200` with a valid certificate chain.
-3. **WHEN** the same request is repeated after a second deploy **THE SYSTEM SHALL** still respond
-   `200` with zero downtime observed.
+1. **WHEN** a GET request reaches `https://$APP_DOMAIN/` **THE SYSTEM SHALL** return HTTP 200.
+2. **WHEN** the TLS handshake is inspected **THE SYSTEM SHALL** present a valid certificate chain.
+3. **WHEN** `http://$APP_DOMAIN/` is requested **THE SYSTEM SHALL** redirect (301/308) to `https://$APP_DOMAIN/`.
+4. **WHEN** the LXC's Nginx access log is inspected after a request **THE SYSTEM SHALL** show it served by PHP-FPM, not a static file.
 
 **Verify**
 
 ```bash
-bash infra/deploy.sh
-test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/")" = 200
-curl -sSv "https://$APP_DOMAIN/" 2>&1 | grep -q "SSL certificate verify ok"
+set -a; source .env; set +a                        # loads APP_DOMAIN
+test "$(curl -sS -o /dev/null -w '%{http_code}' https://$APP_DOMAIN/)" = 200
+test "$(curl -sS -o /dev/null -w '%{http_code}' http://$APP_DOMAIN/)" -ge 300 -a "$(curl -sS -o /dev/null -w '%{http_code}' http://$APP_DOMAIN/)" -lt 400
 ```
 
 **Checkpoint**
 
 ```bash
-git add -A && git commit -m "E1-T5: hello-world deployed over https"
-git tag step-05-deploy
+git add -A && git commit -m "E1-T5: deploy hello-world to production domain over https"
+git tag step-05-deploy-hello-world
 ```
 
 ---
@@ -326,24 +283,22 @@ git tag step-05-deploy
 
 The epic is done when every task is `done` **and**:
 
-1. **WHEN** `git tag -l 'step-0[1-5]-*' | wc -l` runs **THE SYSTEM SHALL** report `5`.
-2. **WHEN** the full local gate is run from a clean checkout **THE SYSTEM SHALL** pass, and a request
-   to the production domain **THE SYSTEM SHALL** respond `200` over valid HTTPS.
+1. **WHEN** `https://$APP_DOMAIN/` is requested **THE SYSTEM SHALL** return 200 with a valid TLS chain, before any epic-02 schema work exists.
+2. **WHEN** the CI workflow runs on any pushed branch **THE SYSTEM SHALL** fail the whole run if `composer audit` or `npm audit --audit-level=high` reports a high-severity advisory.
 
 ```bash
 ./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build
-test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/")" = 200
+set -a; source .env; set +a                        # loads APP_DOMAIN
+test "$(curl -sS -o /dev/null -w '%{http_code}' https://$APP_DOMAIN/)" = 200
 ```
 
 ## Pitfalls
 
-- **Do not front-load schema, auth, or admin work into this epic** because "it would be convenient
-  while the LXC is fresh." This epic proves the pipe, not the product — the next epic starts the
-  data layer.
-- **Do not put `migrate --force` or a queue restart into `infra/deploy.sh` here.** Nothing needs
-  migrating yet and there is no queue worker yet; both are added in `E4-T7` once they exist.
-- **`GITHUB_TOKEN` must never be echoed or logged** by either GitHub script — a leaked fine-grained
-  PAT with `Administration:write` on this repo is a real compromise, not a formality.
+- **Reaching for `gh`.** It is not installed on the build machine. Everything GitHub-side is REST
+  API calls with `curl` and `$GITHUB_TOKEN`.
+- **Adding Redis "just for now."** Every later epic assumes the database driver. Adding
+  `predis/predis` here breaks the grep guard in E1-T1's own Verify and contradicts §2/§11 of the blueprint.
+- **Deploying last.** This epic's whole point is deploying at step 5, not step 27. Do not defer E1-T5.
 
 ## Before moving on
 
@@ -351,11 +306,9 @@ test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/")" = 200
 - [ ] Every `verify` command of every task in this epic passed, not just the first one.
 - [ ] No `verify` command was edited, and none was skipped because a file it names did not exist.
 - [ ] **Every task in this epic has its `checkpoint` tag in version control** — `step-01-scaffold`
-      through `step-05-deploy`. `git tag -l 'step-0[1-5]-*'` lists all 5.
+      through `step-05-deploy-hello-world`.
 - [ ] Gate command passes clean, run from the project root.
-- [ ] `https://$APP_DOMAIN/` returns `200` over valid HTTPS.
+- [ ] Every "Produced" contract above exists with the stated signature.
 - [ ] No file outside the subtree was modified.
-- [ ] `.env.example` was not touched here beyond what the scaffold and Bootstrap already wrote — this
-      epic adds no new application-level variable (the GitHub/deploy variables were already present
-      in the shipped `.env.example`, per `blueprint.md` §10).
+- [ ] `.env.example` updated if this epic added a variable.
 - [ ] One commit per task, each prefixed with its task id, each followed by its checkpoint tag.

@@ -12,8 +12,13 @@ description: Release miautrix-website to the production Debian 13 LXC. Use when 
 
 ## Before you start
 
-- `.env` on the build machine defines `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_PORT`, `DEPLOY_PATH`
-  and `APP_DOMAIN`. Load it: `set -a; . ./.env; set +a`.
+- `infra/provision.sh` has already run once on the target LXC (Nginx, PHP 8.4-FPM, Node 24,
+  Composer, the `deploy` user, firewall, the `$DEPLOY_PATH` release structure). It does not
+  install PostgreSQL — the database is a separate, already-running server; only DB_HOST in
+  `.env` points at it.
+- `.env` on the build machine defines `LXC_HOST`, `LXC_SSH_KEY`, `DEPLOY_PATH`, `DEPLOY_USER`,
+  `DEPLOY_PORT`, `GITHUB_REPO_URL`, and `APP_DOMAIN` (the production hostname). Load it:
+  `set -a; . ./.env; set +a`.
 - The gate must be green locally first:
   `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build`.
 - Deploy from `main` only. `main` is protected: it is reached by a reviewed PR, never a direct push.
@@ -22,31 +27,35 @@ description: Release miautrix-website to the production Debian 13 LXC. Use when 
 
 1. Confirm the working tree is committed and you are on `main` at the commit CI marked green.
 2. Run `bash infra/deploy.sh`. It performs, in this exact order:
-   1. `rsync` the release into a new timestamped directory under `$DEPLOY_PATH/releases/`,
-      excluding `.env`, `storage/`, `node_modules/` and `blueprints/`.
-   2. Symlink the shared `.env` and `storage/` into the release.
-   3. `composer install --no-dev --optimize-autoloader` inside the release.
-   4. `php artisan migrate --force` — **expand-only**. A destructive change ships in a later
+   1. Runs the local gate above — refuses to proceed if any command fails.
+   2. Confirms the current branch is `main` and the tree is clean; captures the commit SHA.
+   3. SSHes into the LXC and `git clone`s that branch/commit straight from GitHub into a new
+      timestamped directory under `$DEPLOY_PATH/releases/` — nothing is rsynced from the build
+      machine except the SSH commands themselves.
+   4. Symlinks the shared `storage/` and `.env` into the release, then
+      `composer install --no-dev --optimize-autoloader` and `npm ci && npm run build` **on the
+      server**.
+   5. `php artisan migrate --force` — **expand-only**. A destructive change ships in a later
       release, never in the same one as the code that stops using the column.
-   5. `php artisan config:cache route:cache view:cache event:cache`.
-   6. Atomically repoint `$DEPLOY_PATH/current` at the new release.
-   7. `php artisan queue:restart` and reload PHP-FPM and Nginx.
-   8. Prune to the last five releases.
-3. Verify from the build machine, not from the server.
+   6. `php artisan config:cache route:cache view:cache event:cache`.
+   7. Atomically repoints `$DEPLOY_PATH/current` at the new release.
+   8. `php artisan queue:restart`, reloads PHP-FPM and Nginx.
+   9. Prunes to the last five releases.
+3. Verifies from the build machine, not from the server — see below.
 
 ## Verify
 
 ```bash
 test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/")" = 200
-test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/health")" = 200
-curl -sS "https://$APP_DOMAIN/health" | jq -e '.database == "ok" and .redis == "ok" and .migrations == "current"'
+test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/up")" = 200
+curl -sS "https://$APP_DOMAIN/up" | jq -e '.database == "ok" and .migrations == "current"'
 curl -sSI "https://$APP_DOMAIN/" | grep -qi '^strict-transport-security:'
 ```
 
 ## Rollback
 
 ```bash
-ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "$DEPLOY_PATH/bin/rollback.sh"
+ssh -i "$LXC_SSH_KEY" -p "$DEPLOY_PORT" "$DEPLOY_USER@$LXC_HOST" "$DEPLOY_PATH/bin/rollback.sh"
 test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/")" = 200
 ```
 
