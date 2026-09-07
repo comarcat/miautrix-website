@@ -1,0 +1,11 @@
+@import 'tailwindcss';
+
+@source '../views';
+
+/*
+ * This blueprint's design system (two swappable themes: Technical + Matrix) lands in
+ * epic 04 (steps 19-20). Deliberately minimal here — E1-T1's only job is a working
+ * Tailwind v4 pipeline. The starter kit's Flux-based theme (flux.css import, zinc
+ * palette, [data-flux-*] selectors) was removed: this project does not use Flux
+ * (blueprint §2/decision log) and builds its own component set instead.
+ */
