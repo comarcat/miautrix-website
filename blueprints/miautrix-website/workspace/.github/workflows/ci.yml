@@ -1,0 +1,113 @@
+name: ci
+
+on:
+  push:
+    branches: [main, develop, 'task/**']
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-24.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.4']
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: miautrix_test
+          POSTGRES_USER: miautrix
+          POSTGRES_PASSWORD: miautrix
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U miautrix -d miautrix_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+
+      redis:
+        image: redis:8
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 30
+
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: pgsql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+      DB_DATABASE: miautrix_test
+      DB_USERNAME: miautrix
+      DB_PASSWORD: miautrix
+      REDIS_CLIENT: predis
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: 6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, pgsql, mbstring, intl, gd, zip, bcmath
+          coverage: none
+          tools: composer:v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Dependency audit (PHP)
+        run: composer audit --format=table
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate --force
+
+      - name: Format check
+        run: ./vendor/bin/pint --test
+
+      - name: Static analysis
+        run: ./vendor/bin/phpstan analyse --no-progress
+
+      - name: Migrate
+        run: php artisan migrate --force
+
+      - name: Tests
+        run: ./vendor/bin/pest --ci
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Dependency audit (JS)
+        run: npm audit --audit-level=high
+
+      - name: Build assets
+        run: npm run build
+
+      - name: Assert build manifest exists
+        run: test -n "$(find public/build -name manifest.json -print -quit)"

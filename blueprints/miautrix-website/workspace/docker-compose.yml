@@ -1,0 +1,46 @@
+# Local development and test services ONLY.
+# Production is the Debian 13 LXC described in blueprint §12 — never point APP_ENV=production here.
+# Volumes are mounted at /var/lib/postgresql (not .../data) so the same file works across the
+# PostgreSQL 18 image layout change. Values below are literal on purpose: this file reads no env var,
+# so `docker compose up -d --wait` works from any shell with no .env loaded.
+
+name: miautrix
+
+services:
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: miautrix
+      POSTGRES_USER: miautrix
+      POSTGRES_PASSWORD: miautrix
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U miautrix -d miautrix"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  redis:
+    image: redis:8
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+volumes:
+  pgdata:
+  redisdata:

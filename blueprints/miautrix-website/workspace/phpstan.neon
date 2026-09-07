@@ -1,0 +1,26 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - app
+        - config
+        - database
+        - routes
+
+    # The blueprint bundle lives inside this project at blueprints/<slug>/ and carries a copy of
+    # this same config under workspace/. Excluding it keeps PHPStan from analysing the bundle
+    # (which has no autoloader) and from treating the copy as a second root config.
+    excludePaths:
+        - blueprints/*
+        - bootstrap/cache/*
+        - node_modules/*
+        - public/build/*
+        - storage/*
+        - vendor/*
+
+    ignoreErrors:
+        # Eloquent magic that Larastan cannot always resolve on generated Filament resources.
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder::#'

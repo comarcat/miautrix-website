@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache"
+         executionOrder="random"
+         failOnWarning="true"
+         failOnRisky="true"
+         beStrictAboutOutputDuringTests="true">
+    <testsuites>
+        <!-- Rooted at tests/ only, so the blueprint bundle under blueprints/ is never collected. -->
+        <testsuite name="Unit">
+            <directory>tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory>tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory>app</directory>
+        </include>
+        <exclude>
+            <directory>blueprints</directory>
+            <directory>vendor</directory>
+        </exclude>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_DEBUG" value="true"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+
+        <!-- Tests run against a REAL PostgreSQL 18 from docker-compose.yml, in a separate
+             database. Never the development database, never SQLite: the schema uses
+             PostgreSQL-specific indexes and constraints that SQLite silently accepts. -->
+        <env name="DB_CONNECTION" value="pgsql"/>
+        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_PORT" value="5432"/>
+        <env name="DB_DATABASE" value="miautrix_test"/>
+        <env name="DB_USERNAME" value="miautrix"/>
+        <env name="DB_PASSWORD" value="miautrix"/>
+
+        <env name="CACHE_STORE" value="array"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="PULSE_ENABLED" value="false"/>
+    </php>
+</phpunit>
