@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoSlug;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,7 +33,7 @@ use Illuminate\Support\Carbon;
  */
 class Article extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasAutoSlug, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'title',
@@ -67,5 +68,10 @@ class Article extends Model
     public function scopePublished(Builder $query): Builder
     {
         return $query->whereNotNull('published_at')->where('published_at', '<=', now());
+    }
+
+    protected function slugSource(): string
+    {
+        return $this->title;
     }
 }
