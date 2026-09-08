@@ -162,7 +162,7 @@
       "app/Models/Profile.php",
       "tests/Feature/Schema/CoreIdentityTest.php"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T2",
