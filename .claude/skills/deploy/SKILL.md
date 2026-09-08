@@ -17,17 +17,22 @@ description: Release miautrix-website to the production Debian 13 LXC. Use when 
   install PostgreSQL — the database is a separate, already-running server; only DB_HOST in
   `.env` points at it.
 - `.env` on the build machine defines `LXC_HOST`, `LXC_SSH_KEY`, `DEPLOY_PATH`, `DEPLOY_USER`,
-  `DEPLOY_PORT`, `GITHUB_REPO_URL`, and `APP_DOMAIN` (the production hostname). Load it:
-  `set -a; . ./.env; set +a`.
-- The gate must be green locally first:
-  `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && npm run build && ./vendor/bin/pest`.
+  `DEPLOY_PORT`, `GITHUB_REPO_URL`, and `APP_DOMAIN` (the production hostname). **Do NOT
+  `source` it before running `infra/deploy.sh` — the script loads it internally, after its own
+  local gate.** Sourcing it first reproducibly broke Pest (9 auth tests failing with 419/CSRF
+  and missing-notification errors) for reasons not fully isolated after exhausting individual
+  and combined env-var bisection — `phpunit.xml`'s testing overrides carry `force="true"` and
+  it still happened. The gate needs none of `.env`'s values, so the script simply doesn't load
+  it until after the gate passes. You only need to `set -a; . ./.env; set +a` yourself when
+  running the Verify/Rollback commands below *manually*, outside the script.
 - Deploy from `main` only. `main` is protected: it is reached by a reviewed PR, never a direct push.
 
 ## Steps
 
 1. Confirm the working tree is committed and you are on `main` at the commit CI marked green.
-2. Run `bash infra/deploy.sh`. It performs, in this exact order:
-   1. Runs the local gate above — refuses to proceed if any command fails.
+2. Run `bash infra/deploy.sh` (no `.env` sourcing first). It performs, in this exact order:
+   1. Runs the local gate (pint, phpstan, `npm run build`, pest — build before test, same fix
+      as everywhere else) — refuses to proceed if any command fails. No `.env` loaded yet.
    2. Confirms the current branch is `main` and the tree is clean; captures the commit SHA.
    3. SSHes into the LXC and `git clone`s that branch/commit straight from GitHub into a new
       timestamped directory under `$DEPLOY_PATH/releases/` — nothing is rsynced from the build
