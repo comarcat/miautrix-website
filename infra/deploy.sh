@@ -92,6 +92,14 @@ cd "$RELEASE_DIR"
 composer install --no-dev --optimize-autoloader --no-interaction
 npm ci
 npm run build
+# bootstrap/cache is written by php artisan config:cache/route:cache/view:cache/event:cache in
+# step 5/8, which run as $DEPLOY_USER (over SSH) but the cached files are then read (and, on
+# framework auto-rebuild, re-written) by PHP-FPM running as www-data. composer install just
+# created this dir owned deploy:deploy at the default umask — group it into www-data with
+# group-write, same reasoning as shared/storage in infra/provision.sh, so a future request can't
+# hit the same permissions 500 that storage/ did.
+chgrp -R www-data "$RELEASE_DIR/bootstrap/cache"
+chmod -R 775 "$RELEASE_DIR/bootstrap/cache"
 REMOTE_LINK
 
 echo "==> 5/8 migrate --force (expand-only — never :fresh, never db:wipe)"
@@ -138,7 +146,12 @@ REMOTE_PRUNE
 
 echo "==> verifying from the build machine"
 test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/")" = 200
+# /up is Laravel's stock health route (bootstrap/app.php's ->withRouting(health: '/up')) — a
+# plain HTML page confirming the HTTP kernel booted, not a custom JSON endpoint. It does NOT
+# check database connectivity on its own (no DB query happens during that boot path). A
+# .database-field JSON body was documented here before anyone built the custom health
+# controller that would produce it — dropped that check rather than assert something that
+# doesn't exist. A DB-aware /up replacement is real future scope, not this step's.
 test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/up")" = 200
-curl -sS "https://$APP_DOMAIN/up" | jq -e '.database == "ok"'
 
 echo "==> deployed $COMMIT_SHA as release $RELEASE_ID"

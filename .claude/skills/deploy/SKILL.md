@@ -53,9 +53,12 @@ description: Release miautrix-website to the production Debian 13 LXC. Use when 
 ```bash
 test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/")" = 200
 test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/up")" = 200
-curl -sS "https://$APP_DOMAIN/up" | jq -e '.database == "ok" and .migrations == "current"'
 curl -sSI "https://$APP_DOMAIN/" | grep -qi '^strict-transport-security:'
 ```
+
+`/up` is Laravel's stock health route — HTML, not JSON, and it doesn't check DB connectivity on
+its own. A custom `.database`/`.migrations` JSON body was documented here before that controller
+existed; dropped rather than asserted against nothing. Real DB-aware health check is future scope.
 
 ## Rollback
 
