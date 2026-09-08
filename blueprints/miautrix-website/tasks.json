@@ -534,7 +534,8 @@
       "public/fonts/ibm-plex-sans-400.woff2",
       "tests/Feature/Layout/MetaComponentTest.php"
     ],
-    "status": "pending"
+    "status": "done",
+    "note": "2026-09-08: public/fonts/*.woff2 binaries deliberately not added (no real font files sourced yet — approved gap, tracked for a later task); app.css/@font-face and the layout's preload tags reference the correct paths so nothing else needs to change once the binaries land. Vite's font plugin correctly defers unresolved font references to runtime rather than failing the build."
   },
   {
     "id": "E4-T2",
