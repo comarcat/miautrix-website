@@ -59,5 +59,12 @@
         <env force="true" name="MAIL_MAILER" value="array"/>
         <env force="true" name="TELESCOPE_ENABLED" value="false"/>
         <env force="true" name="PULSE_ENABLED" value="false"/>
+
+        <!-- Required from E2-T7 onward: DatabaseSeeder throws if either is unset, and CI's
+             .env comes from .env.example (deliberately blank secrets), not the real .env this
+             dev machine has. SeederTest calls $this->seed(DatabaseSeeder::class) directly, so
+             it needs these regardless of what CI's job-level `env:` block does or doesn't set. -->
+        <env force="true" name="ADMIN_SEED_EMAIL" value="admin@example.test"/>
+        <env force="true" name="ADMIN_SEED_PASSWORD" value="testing-only-not-a-real-password"/>
     </php>
 </phpunit>
