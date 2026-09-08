@@ -93,6 +93,30 @@ class Project extends Model
         return $this->belongsToMany(Technology::class, 'project_technologies');
     }
 
+    /**
+     * project_media is the same shape as project_technologies (composite PK, no
+     * id/timestamps) plus its own sort_order column (E4-T5, §9 step 23 — a project's gallery
+     * needs a stable display order, unlike the technologies pivot).
+     *
+     * @return BelongsToMany<Media, $this>
+     */
+    public function media(): BelongsToMany
+    {
+        return $this->belongsToMany(Media::class, 'project_media')
+            ->withPivot('sort_order')
+            ->orderByPivot('sort_order');
+    }
+
+    /**
+     * project_documents: same composite-PK-pivot shape, no ordering column (E4-T5).
+     *
+     * @return BelongsToMany<Document, $this>
+     */
+    public function documents(): BelongsToMany
+    {
+        return $this->belongsToMany(Document::class, 'project_documents');
+    }
+
     protected function slugSource(): string
     {
         return $this->title;

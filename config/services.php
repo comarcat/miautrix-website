@@ -35,4 +35,19 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Contact form
+    |--------------------------------------------------------------------------
+    |
+    | Required from step 23 (blueprint §9/§10) — app/Livewire/ContactForm.php relays
+    | submissions here via Laravel Mail rather than storing them in the database (§4/§15
+    | PII handling: contact-form submissions are not persisted).
+    |
+    */
+
+    'contact' => [
+        'to_address' => env('CONTACT_TO_ADDRESS'),
+    ],
+
 ];
