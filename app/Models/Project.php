@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoSlug;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -36,7 +37,7 @@ use Illuminate\Support\Carbon;
  */
 class Project extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasAutoSlug, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'project_category_id',
@@ -90,5 +91,10 @@ class Project extends Model
     public function technologies(): BelongsToMany
     {
         return $this->belongsToMany(Technology::class, 'project_technologies');
+    }
+
+    protected function slugSource(): string
+    {
+        return $this->title;
     }
 }
