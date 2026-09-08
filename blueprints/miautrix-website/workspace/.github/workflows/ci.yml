@@ -17,16 +17,13 @@ jobs:
   ci:
     # Branch protection requires a check literally named "ci" (see blueprint §9 steps 2-3).
     # GitHub reports the JOB's `name:` as the check-run context, not the workflow's top-level
-    # `name:` — a matrix-derived name here ("PHP ${{ matrix.php }}") would report as "PHP 8.4"
-    # instead, which required_status_checks.contexts: ["ci"] would then never match. With a
-    # single-entry PHP matrix the per-version label buys nothing; correctness wins.
+    # `name:` — and for ANY job using a matrix strategy, GitHub appends "(<matrix-key>)" to that
+    # name regardless of an explicit override (confirmed: `name: ci` under a one-entry `php`
+    # matrix still reported as "ci (8.4)", not "ci"). PHP 8.4 is a hard floor set by Pest 5, not
+    # a range to test across, so there was never a reason for a matrix here — removed it and
+    # hardcoded the version below instead of fighting GitHub's per-matrix-entry naming.
     name: ci
     runs-on: ubuntu-24.04
-
-    strategy:
-      fail-fast: false
-      matrix:
-        php: ['8.4']
 
     services:
       postgres:
@@ -59,7 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up PHP ${{ matrix.php }}
+      - name: Set up PHP 8.4
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
