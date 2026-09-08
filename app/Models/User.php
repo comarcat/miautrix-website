@@ -4,6 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,7 +34,7 @@ use Spatie\Permission\Traits\HasRoles;
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable implements PasskeyUser
+class User extends Authenticatable implements FilamentUser, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
@@ -56,6 +58,17 @@ class User extends Authenticatable implements PasskeyUser
     public function profile(): HasOne
     {
         return $this->hasOne(Profile::class);
+    }
+
+    /**
+     * Without this, Filament's own Authenticate middleware allows any authenticated user
+     * into the panel in a local environment and 403s everyone in any other environment
+     * (vendor/filament/filament/src/Http/Middleware/Authenticate.php) — neither is what this
+     * single-admin site wants. Gate on the same role every Policy already checks (E2-T6).
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->hasRole('super_admin');
     }
 
     /**
