@@ -87,7 +87,7 @@
   },
   {
     "id": "E1-T4",
-    "title": "Provision Debian 13 LXC (Nginx, PHP-FPM, PostgreSQL, supervisor, UFW)",
+    "title": "Provision Debian 13 LXC (Nginx, PHP-FPM, supervisor, UFW — no local Postgres)",
     "epic": "01-foundation",
     "dependencies": [
       "E1-T3"
@@ -96,21 +96,20 @@
     "acceptance": [
       "WHEN the remote host is queried for `systemctl is-active nginx` THE SYSTEM SHALL report `active`.",
       "WHEN queried for `systemctl is-active php8.4-fpm` THE SYSTEM SHALL report `active`.",
-      "WHEN queried for `systemctl is-active postgresql` THE SYSTEM SHALL report `active`.",
       "WHEN queried for `systemctl is-active supervisor` THE SYSTEM SHALL report `active`.",
-      "WHEN a TCP connection to the LXC's PostgreSQL port is attempted from OFF-HOST THE SYSTEM SHALL be refused.",
-      "WHEN `ufw status` is queried THE SYSTEM SHALL show only 80, 443, and the configured SSH port as ALLOW."
+      "WHEN `ufw status` is queried THE SYSTEM SHALL show only 80, 443, and the configured SSH port as ALLOW.",
+      "WHEN the remote host is queried for an installed PostgreSQL server package THE SYSTEM SHALL confirm none is installed — the database genuinely lives elsewhere."
     ],
     "verify": [
-      "ssh -i \"$LXC_SSH_KEY\" \"root@$LXC_HOST\" 'systemctl is-active nginx && systemctl is-active php8.4-fpm && systemctl is-active postgresql && systemctl is-active supervisor'",
-      "timeout 3 bash -c \"cat < /dev/null > /dev/tcp/$LXC_HOST/5432\" ; test $? -ne 0",
-      "test \"$(ssh -i \"$LXC_SSH_KEY\" \"root@$LXC_HOST\" 'ufw status | grep -cE \"ALLOW\"')\" -ge 3"
+      "ssh -i \"$LXC_SSH_KEY\" \"root@$LXC_HOST\" 'systemctl is-active nginx && systemctl is-active php8.4-fpm && systemctl is-active supervisor'",
+      "test \"$(ssh -i \"$LXC_SSH_KEY\" \"root@$LXC_HOST\" 'ufw status | grep -cE \"ALLOW\"')\" -ge 3",
+      "ssh -i \"$LXC_SSH_KEY\" \"root@$LXC_HOST\" '! dpkg -l | grep -qi postgresql-'"
     ],
     "checkpoint": "step-04-provision",
     "files": [
       "infra/provision.sh"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E1-T5",

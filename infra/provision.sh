@@ -3,6 +3,16 @@
 # Run ONCE, as root, on the LXC itself (not the build machine):
 #   ssh root@<lxc-ip> 'bash -s' < infra/provision.sh
 #
+# Prefer running it as a transient systemd unit instead of directly over the SSH session —
+# many systemd-logind configurations kill all of a user's processes when their login session
+# ends (KillUserProcesses), which SIGHUPs a plain `nohup ... &` mid-install if the client
+# disconnects. A transient unit survives that:
+#   scp infra/provision.sh root@<lxc-ip>:/root/provision.sh
+#   ssh root@<lxc-ip> "systemd-run --unit=provision --collect \
+#     --setenv=APP_DOMAIN=<domain> --setenv=DEPLOY_PUBKEY='<pubkey>' \
+#     bash -c 'bash /root/provision.sh > /root/provision.log 2>&1'"
+#   ssh root@<lxc-ip> "journalctl -u provision.service --no-pager"   # check status/log after
+#
 # What this does NOT do, on purpose:
 #   - Does NOT install PostgreSQL. This project's database is a separate, already-running
 #     server (see .env's DB_HOST) — the LXC is web/app tier only.
@@ -16,6 +26,13 @@
 
 set -euo pipefail
 
+# Never rely on an interactive login shell's environment — this script is also meant to run
+# under `systemd-run` (so a client-side SSH disconnect can't SIGHUP-kill a long apt-get/composer
+# install via systemd-logind's session cleanup), and transient units set neither HOME nor
+# COMPOSER_HOME. Composer refuses to run without one. Set it explicitly and unconditionally.
+export HOME="${HOME:-/root}"
+export COMPOSER_HOME="${COMPOSER_HOME:-$HOME/.composer}"
+
 DEPLOY_USER="${DEPLOY_USER:-deploy}"
 DEPLOY_PATH="${DEPLOY_PATH:-/var/www/miautrix}"
 APP_DOMAIN="${APP_DOMAIN:?Set APP_DOMAIN before running (the production hostname, no scheme)}"
@@ -26,12 +43,12 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get upgrade -y
 
-echo "==> installing nginx, PHP 8.4-FPM + required extensions, Node 24 LTS, git, composer, ufw"
+echo "==> installing nginx, PHP 8.4-FPM + required extensions, Node 24 LTS, git, composer, ufw, supervisor"
 apt-get install -y \
   nginx \
   php8.4-fpm php8.4-cli php8.4-pgsql php8.4-mbstring php8.4-xml php8.4-curl \
   php8.4-zip php8.4-gd php8.4-intl php8.4-bcmath php8.4-opcache \
-  git unzip curl ufw ca-certificates gnupg
+  git unzip curl ufw ca-certificates gnupg supervisor
 
 # Composer (official installer, checksum-verified)
 if ! command -v composer >/dev/null 2>&1; then
@@ -153,6 +170,7 @@ rm -f /etc/nginx/sites-enabled/default
 
 echo "==> enabling services"
 systemctl enable --now php8.4-fpm
+systemctl enable --now supervisor
 nginx -t
 systemctl enable --now nginx
 

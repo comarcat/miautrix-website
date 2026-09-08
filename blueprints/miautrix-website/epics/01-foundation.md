@@ -213,8 +213,10 @@ git tag step-03-ci
 **Depends on:** `E1-T3` · **Priority:** p0
 
 Write `infra/provision.sh`, run once over SSH against `$LXC_HOST` with `$LXC_SSH_KEY`. Install and
-enable Nginx, PHP-FPM 8.4+, PostgreSQL 18 (bound to `127.0.0.1`), `supervisor`, UFW restricted to
-80/443 and a restricted SSH port. No Redis on this host.
+enable Nginx, PHP-FPM 8.4+, Node 24 LTS, Composer, `supervisor`, UFW restricted to 80/443 and a
+restricted SSH port; create the `deploy` user and release directory layout. **No PostgreSQL here** —
+the database is a separate, already-running server the owner administers (confirmed during this
+build: `DB_HOST` in `.env`); this LXC is web/app tier only. No Redis either.
 
 **Files**
 - `infra/provision.sh` — new
@@ -223,17 +225,16 @@ enable Nginx, PHP-FPM 8.4+, PostgreSQL 18 (bound to `127.0.0.1`), `supervisor`, 
 
 1. **WHEN** the remote host is queried for `systemctl is-active nginx` **THE SYSTEM SHALL** report `active`.
 2. **WHEN** queried for `systemctl is-active php8.4-fpm` **THE SYSTEM SHALL** report `active`.
-3. **WHEN** queried for `systemctl is-active postgresql` **THE SYSTEM SHALL** report `active`.
-4. **WHEN** queried for `systemctl is-active supervisor` **THE SYSTEM SHALL** report `active`.
-5. **WHEN** a TCP connection to the LXC's PostgreSQL port is attempted from OFF-HOST **THE SYSTEM SHALL** be refused.
-6. **WHEN** `ufw status` is queried **THE SYSTEM SHALL** show only 80, 443, and the configured SSH port as ALLOW.
+3. **WHEN** queried for `systemctl is-active supervisor` **THE SYSTEM SHALL** report `active`.
+4. **WHEN** `ufw status` is queried **THE SYSTEM SHALL** show only 80, 443, and the configured SSH port as ALLOW.
+5. **WHEN** the remote host is queried for an installed PostgreSQL server package **THE SYSTEM SHALL** confirm none is installed.
 
 **Verify**
 
 ```bash
-ssh -i "$LXC_SSH_KEY" "root@$LXC_HOST" 'systemctl is-active nginx && systemctl is-active php8.4-fpm && systemctl is-active postgresql && systemctl is-active supervisor'
-timeout 3 bash -c "cat < /dev/null > /dev/tcp/$LXC_HOST/5432" ; test $? -ne 0
+ssh -i "$LXC_SSH_KEY" "root@$LXC_HOST" 'systemctl is-active nginx && systemctl is-active php8.4-fpm && systemctl is-active supervisor'
 test "$(ssh -i "$LXC_SSH_KEY" "root@$LXC_HOST" 'ufw status | grep -cE "ALLOW"')" -ge 3
+ssh -i "$LXC_SSH_KEY" "root@$LXC_HOST" '! dpkg -l | grep -qi postgresql-'
 ```
 
 **Checkpoint**
