@@ -25,6 +25,12 @@
                                 <x-badge variant="accent" class="mb-2">{{ $project->projectCategory->name }}</x-badge>
                             @endif
                             <p>{{ $project->summary }}</p>
+
+                            <x-slot:footer>
+                                <x-button :href="route('projects.show', $project->slug)" variant="outline" size="sm">
+                                    View project
+                                </x-button>
+                            </x-slot:footer>
                         </x-card>
                     @endforeach
                 </div>

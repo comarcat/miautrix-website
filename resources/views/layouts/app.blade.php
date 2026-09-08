@@ -35,9 +35,11 @@
                 <a href="{{ route('about') }}" class="hover:text-accent-text">About</a>
                 <a href="{{ route('experience') }}" class="hover:text-accent-text">Experience</a>
                 <a href="{{ route('skills') }}" class="hover:text-accent-text">Skills</a>
-                {{-- Projects/Blog/Contact land as each of those routes is actually built
-                     (E4-T5/T6) — a link to a route that doesn't exist yet would itself be a
-                     broken-by-construction bug, not a placeholder worth shipping. --}}
+                <a href="{{ route('projects.index') }}" class="hover:text-accent-text">Projects</a>
+                <a href="{{ route('contact') }}" class="hover:text-accent-text">Contact</a>
+                {{-- Blog lands once /blog exists (E4-T6) — a link to a route that doesn't
+                     exist yet would itself be a broken-by-construction bug, not a placeholder
+                     worth shipping. --}}
                 <x-theme-switcher :theme="$theme ?? 'technical'" />
             </nav>
         </div>

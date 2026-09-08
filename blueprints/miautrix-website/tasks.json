@@ -649,7 +649,8 @@
       "app/Http/Controllers/Public/ProjectController.php",
       "tests/Feature/Public/ProjectsContactTest.php"
     ],
-    "status": "pending"
+    "status": "done",
+    "note": "2026-09-08: scoped to exactly this task's acceptance/verify/files — the epic's prose 'Do' section also mentions /software, /certifications, and /resume pages, but none of those appear in this task's acceptance criteria, verify command, or files array (resume download already exists via E3-T5's documents.download route), so they were not built here, matching the E3-T6 precedent of acceptance-over-prose scope. Added Project::media()/documents() BelongsToMany relations (app/Models/Project.php) — the project_media/project_documents pivot tables existed since E2-T3 but no Eloquent relation had ever consumed them until this task's own acceptance criterion required exposing them. Contact mail deliberately NOT ShouldQueue (see app/Mail/ContactMessageMail.php docblock) — the supervised queue worker doesn't exist until E5-T3, so queuing now would silently swallow every submission until then. Added config/services.php's 'contact.to_address' (CONTACT_TO_ADDRESS, already present in .env/.env.example from bootstrap). Re-added the home page's 'View project' links (deliberately deferred in E4-T4 since /projects/{slug} didn't exist yet) and added Projects/Contact to the nav."
   },
   {
     "id": "E4-T6",
