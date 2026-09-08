@@ -590,7 +590,8 @@
       "app/View/Components/Modal.php",
       "tests/Feature/Components/ComponentLibraryTest.php"
     ],
-    "status": "pending"
+    "status": "done",
+    "note": "2026-09-08: all 12 components built (button, card, badge, timeline, table, tabs, modal, alert, toast, file-upload, image-gallery, breadcrumb) — none reference a raw hex color, all use only --color-* tokens via Tailwind utility classes, so theme-agnosticism is structural rather than tested-in. Modal's focus trap is hand-rolled Alpine (no external plugin: Livewire's bundled Alpine core doesn't ship the focus/x-trap plugin). Found and worked around a real Blade compiler quirk along the way: a colon-shorthand named slot (<x-slot:name>...</x-slot:name>) written on a single line fails to compile correctly (the literal '@endslot' leaks into rendered output) and separately trips PHPUnit's failOnRisky via an unclosed output buffer — multi-line slot formatting is required and is now the documented convention for any future component using named slots."
   },
   {
     "id": "E4-T4",
