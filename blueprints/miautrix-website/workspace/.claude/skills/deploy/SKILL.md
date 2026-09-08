@@ -20,7 +20,7 @@ description: Release miautrix-website to the production Debian 13 LXC. Use when 
   `DEPLOY_PORT`, `GITHUB_REPO_URL`, and `APP_DOMAIN` (the production hostname). Load it:
   `set -a; . ./.env; set +a`.
 - The gate must be green locally first:
-  `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build`.
+  `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && npm run build && ./vendor/bin/pest`.
 - Deploy from `main` only. `main` is protected: it is reached by a reviewed PR, never a direct push.
 
 ## Steps

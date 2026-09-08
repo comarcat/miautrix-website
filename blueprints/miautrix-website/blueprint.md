@@ -840,8 +840,10 @@ repo with one commit, no source code yet):
 ```bash
 ./vendor/bin/pint --test                          # expect: exit 0
 ./vendor/bin/phpstan analyse                       # expect: exit 0
+npm run build                                      # expect: exit 0 — BEFORE pest: several generated
+                                                    #   auth/settings views render @vite() and throw
+                                                    #   ViteManifestNotFoundException with no manifest
 ./vendor/bin/pest                                  # expect: exit 0, 0 failed, 0 skipped
-npm run build                                      # expect: exit 0
 
 php artisan serve --port=8123 & SERVE_PID=$!
 sleep 1

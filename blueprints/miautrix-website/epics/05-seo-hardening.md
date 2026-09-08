@@ -217,7 +217,7 @@ The epic is done when every task is `done` **and**:
 2. **WHEN** `git tag -l 'step-*' | wc -l` is checked **THE SYSTEM SHALL** report exactly 27.
 
 ```bash
-./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build
+./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && npm run build && ./vendor/bin/pest
 php artisan seo:audit
 ./vendor/bin/pest tests/Feature/A11yTest.php
 test "$(git tag -l 'step-*' | wc -l)" -eq 27

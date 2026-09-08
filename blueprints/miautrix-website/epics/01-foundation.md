@@ -34,7 +34,7 @@ behind Nginx and Cloudflare. Package manager: Composer (PHP) + npm (JS).
 | Build assets | `npm run build` |
 | Dev server | `php artisan serve` |
 
-**Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build`
+**Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && npm run build && ./vendor/bin/pest`
 passes before any task here is marked done.
 
 The compose file (`docker-compose.yml`, at the project root) and its PostgreSQL 18 service are
@@ -124,8 +124,8 @@ recreate them. Confirm no `predis/predis` or `laravel/horizon` ever enters `comp
 ```bash
 ./vendor/bin/pint --test
 ./vendor/bin/phpstan analyse
-./vendor/bin/pest
 npm run build
+./vendor/bin/pest
 php artisan serve --port=8123 & SERVE_PID=$!; sleep 1; test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8123/)" = 200; kill "$SERVE_PID"
 ! grep -q '"predis/predis"' composer.json
 ! grep -q '"laravel/horizon"' composer.json
@@ -287,7 +287,7 @@ The epic is done when every task is `done` **and**:
 2. **WHEN** the CI workflow runs on any pushed branch **THE SYSTEM SHALL** fail the whole run if `composer audit` or `npm audit --audit-level=high` reports a high-severity advisory.
 
 ```bash
-./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build
+./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && npm run build && ./vendor/bin/pest
 set -a; source .env; set +a                        # loads APP_DOMAIN
 test "$(curl -sS -o /dev/null -w '%{http_code}' https://$APP_DOMAIN/)" = 200
 ```

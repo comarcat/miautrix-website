@@ -16,8 +16,8 @@
     "verify": [
       "./vendor/bin/pint --test",
       "./vendor/bin/phpstan analyse",
-      "./vendor/bin/pest",
       "npm run build",
+      "./vendor/bin/pest",
       "php artisan serve --port=8123 & SERVE_PID=$!; sleep 1; test \"$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8123/)\" = 200; kill \"$SERVE_PID\"",
       "! grep -q '\"predis/predis\"' composer.json",
       "! grep -q '\"laravel/horizon\"' composer.json"

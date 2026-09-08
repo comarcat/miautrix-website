@@ -90,9 +90,6 @@ jobs:
       - name: Migrate
         run: php artisan migrate --force
 
-      - name: Tests
-        run: ./vendor/bin/pest --ci
-
       - name: Install JS dependencies
         run: npm ci
 
@@ -104,3 +101,9 @@ jobs:
 
       - name: Assert build manifest exists
         run: test -n "$(find public/build -name manifest.json -print -quit)"
+
+      # MUST run after the asset build: several generated auth/settings views render
+      # @vite() directives, which throw ViteManifestNotFoundException on a clean checkout
+      # with no public/build/manifest.json — found by an actual CI run failing here.
+      - name: Tests
+        run: ./vendor/bin/pest --ci
