@@ -47,6 +47,12 @@
                     @foreach ($latestArticles as $article)
                         <x-card :title="$article->title">
                             <p>{{ $article->excerpt }}</p>
+
+                            <x-slot:footer>
+                                <x-button :href="route('blog.show', $article->slug)" variant="outline" size="sm">
+                                    Read more
+                                </x-button>
+                            </x-slot:footer>
                         </x-card>
                     @endforeach
                 </div>

@@ -7,6 +7,7 @@ use App\Support\Analytics\NullAnalyticsProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Telescope\TelescopeServiceProvider as PackageTelescopeServiceProvider;
@@ -49,6 +50,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // resources/views/feed.xml.blade.php responds to view('feed') (E4-T6, §9 step 24) —
+        // this task's own verify command calls view('feed', ...) directly, and the route
+        // needs the same name to set the RSS content-type on the response rather than on
+        // the view itself. Registered before 'blade.php' so the more specific extension
+        // wins the finder's file_exists() probe for a name that also happens to end .xml.
+        View::addExtension('xml.blade.php', 'blade');
     }
 
     /**

@@ -679,7 +679,8 @@
       "routes/web.php",
       "tests/Feature/Public/BlogFeedTest.php"
     ],
-    "status": "pending"
+    "status": "done",
+    "note": "2026-09-08: FINDING — this task's own second verify command (`php artisan tinker --execute=\"exit(...)\"`) cannot ever produce a meaningful pass/fail signal: confirmed empirically that `artisan tinker --execute` always exits 1 regardless of the exit() code executed inside it (tested with both exit(0) and exit(1) directly — both returned shell exit code 1, tinker/PsySH prints 'Goodbye' and exits 1 unconditionally). This is a tinker/PsySH behavior, not a defect in feed.xml.blade.php. Correctness was verified equivalently via a standalone bootstrap script running the exact same `view('feed', ['articles' => Article::published()->get()])` + `simplexml_load_string()` check outside tinker, which returned VALID with zero libxml errors. Recommend the blueprint's verify command be corrected in a future /architect-refresh pass (e.g. a dedicated Artisan command, or a Pest test asserting the same, rather than tinker --execute). Registered the 'xml.blade.php' view extension in AppServiceProvider so resources/views/feed.xml.blade.php resolves via view('feed') as the verify command and BlogController::feed() both expect. Re-linked the home page's latest-articles cards and added a Blog nav link, both deferred since E4-T4 (route didn't exist yet)."
   },
   {
     "id": "E5-T1",
