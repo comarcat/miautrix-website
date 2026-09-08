@@ -27,7 +27,7 @@ self-hosted IBM Plex Sans + JetBrains Mono woff2 · Pest `^5.1`.
 | Test (one file) | `./vendor/bin/pest {path}` |
 | Dev server | `php artisan serve` |
 
-**Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build`
+**Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && npm run build && ./vendor/bin/pest`
 passes before any task here is marked done.
 
 ## Directory subtree
@@ -322,7 +322,7 @@ The epic is done when every task is `done` **and**:
 2. **WHEN** the seeded database's Articles are published **THE SYSTEM SHALL** appear on `/blog` and in `/feed.xml` with no code change.
 
 ```bash
-./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build
+./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && npm run build && ./vendor/bin/pest
 ```
 
 ## Pitfalls

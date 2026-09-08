@@ -26,7 +26,7 @@ are part of the deliverable.
 | Deploy | `bash infra/deploy.sh` |
 | Backup / restore drill | `bash infra/backup.sh --restore-to-scratch-and-verify` |
 
-**Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build`
+**Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && npm run build && ./vendor/bin/pest`
 must pass before any task is marked done.
 
 `php artisan` boots the framework, which loads `.env`. Dependency versions live in `composer.lock`

@@ -17,7 +17,7 @@ cache, and session all use the `database` driver.
 | Tests | `./vendor/bin/pest` · one file: `./vendor/bin/pest tests/Feature/X.php` |
 | Migrate / seed | `php artisan migrate` · `php artisan db:seed` |
 
-**Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build`
+**Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && npm run build && ./vendor/bin/pest`
 
 ## Non-negotiable
 

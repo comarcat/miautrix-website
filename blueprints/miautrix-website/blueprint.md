@@ -840,8 +840,10 @@ repo with one commit, no source code yet):
 ```bash
 ./vendor/bin/pint --test                          # expect: exit 0
 ./vendor/bin/phpstan analyse                       # expect: exit 0
+npm run build                                      # expect: exit 0 — BEFORE pest: several generated
+                                                    #   auth/settings views render @vite() and throw
+                                                    #   ViteManifestNotFoundException with no manifest
 ./vendor/bin/pest                                  # expect: exit 0, 0 failed, 0 skipped
-npm run build                                      # expect: exit 0
 
 php artisan serve --port=8123 & SERVE_PID=$!
 sleep 1
@@ -882,10 +884,13 @@ reaches for `gh`.
 ```bash
 git ls-remote origin main                          # expect: exit 0, a ref line printed
 
+# --arg (not an embedded "ci" literal in the filter) — PowerShell mangles a double-quoted
+# string nested inside a single-quoted jq program passed to a native exe; --arg sidesteps it
+# and works identically on POSIX shells too.
 curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/branches/main/protection" \
-  | jq -e '.required_pull_request_reviews != null and (.required_status_checks.contexts | index("ci")) != null'
+  | jq -e --arg ctx "ci" '.required_pull_request_reviews != null and (.required_status_checks.contexts | index($ctx)) != null'
                                                     # expect: exit 0, prints "true"
 ```
 
@@ -925,7 +930,7 @@ grep -q "npm audit --audit-level=high" .github/workflows/ci.yml   # expect: exit
 git push origin HEAD:ci-smoke-check
 curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" \
   "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$(git rev-parse HEAD)/check-runs" \
-  | jq -e '[.check_runs[] | select(.name=="ci")][0].conclusion == "success"'
+  | jq -e --arg ctx "ci" --arg ok "success" '[.check_runs[] | select(.name==$ctx)][0].conclusion == $ok'
                                                               # expect: exit 0, prints "true" (poll until check completes)
 git push origin --delete ci-smoke-check
 ```

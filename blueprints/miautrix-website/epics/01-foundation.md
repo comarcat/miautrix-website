@@ -34,7 +34,7 @@ behind Nginx and Cloudflare. Package manager: Composer (PHP) + npm (JS).
 | Build assets | `npm run build` |
 | Dev server | `php artisan serve` |
 
-**Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build`
+**Gate:** `./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && npm run build && ./vendor/bin/pest`
 passes before any task here is marked done.
 
 The compose file (`docker-compose.yml`, at the project root) and its PostgreSQL 18 service are
@@ -124,8 +124,8 @@ recreate them. Confirm no `predis/predis` or `laravel/horizon` ever enters `comp
 ```bash
 ./vendor/bin/pint --test
 ./vendor/bin/phpstan analyse
-./vendor/bin/pest
 npm run build
+./vendor/bin/pest
 php artisan serve --port=8123 & SERVE_PID=$!; sleep 1; test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8123/)" = 200; kill "$SERVE_PID"
 ! grep -q '"predis/predis"' composer.json
 ! grep -q '"laravel/horizon"' composer.json
@@ -161,7 +161,7 @@ check required, no force-push). Never use the `gh` CLI — it is not installed.
 
 ```bash
 git ls-remote origin main
-curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/branches/main/protection" | jq -e '.required_pull_request_reviews != null and (.required_status_checks.contexts | index("ci")) != null'
+curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/branches/main/protection" | jq -e --arg ctx "ci" '.required_pull_request_reviews != null and (.required_status_checks.contexts | index($ctx)) != null'
 ```
 
 **Checkpoint**
@@ -198,7 +198,7 @@ python3 -c "import yaml,sys; yaml.safe_load(open('.github/workflows/ci.yml'))"
 grep -q "composer audit" .github/workflows/ci.yml
 grep -q "npm audit --audit-level=high" .github/workflows/ci.yml
 ! grep -qi "redis" .github/workflows/ci.yml
-git push origin HEAD:ci-smoke-check && curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$(git rev-parse HEAD)/check-runs" | jq -e '[.check_runs[] | select(.name=="ci")][0].conclusion == "success"' && git push origin --delete ci-smoke-check
+git push origin HEAD:ci-smoke-check && curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/commits/$(git rev-parse HEAD)/check-runs" | jq -e --arg ctx "ci" --arg ok "success" '[.check_runs[] | select(.name==$ctx)][0].conclusion == $ok' && git push origin --delete ci-smoke-check
 ```
 
 **Checkpoint**
@@ -287,7 +287,7 @@ The epic is done when every task is `done` **and**:
 2. **WHEN** the CI workflow runs on any pushed branch **THE SYSTEM SHALL** fail the whole run if `composer audit` or `npm audit --audit-level=high` reports a high-severity advisory.
 
 ```bash
-./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && ./vendor/bin/pest && npm run build
+./vendor/bin/pint --test && ./vendor/bin/phpstan analyse && npm run build && ./vendor/bin/pest
 set -a; source .env; set +a                        # loads APP_DOMAIN
 test "$(curl -sS -o /dev/null -w '%{http_code}' https://$APP_DOMAIN/)" = 200
 ```
