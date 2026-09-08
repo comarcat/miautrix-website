@@ -12,6 +12,13 @@ paths:
 - **Never edit a migration that has already run** on any environment. Add a new one.
 - **`php artisan migrate:fresh` is a local reset only.** It must never appear in `infra/deploy.sh`,
   in CI, or in any script that can run against a non-local database.
+- **Local `.env`'s `DB_DATABASE` must never equal production's.** Both point `DB_HOST` at the same
+  network Postgres server (172.16.101.12); if `DB_DATABASE` also matches, every task's
+  `migrate:fresh` verify step drops production's tables. This actually happened (2026-09-08,
+  caught at E2-T4 kickoff) before anything had been seeded — no data was lost, but it would
+  destroy real content silently. Local dev uses `miautrix_dev`, tests use `miautrix_test`
+  (phpunit.xml), production uses `miautrix_website`. Never point local `.env` at
+  `miautrix_website`.
 - Every model sets `$fillable` explicitly. `$guarded = []` is banned — it is a mass-assignment hole.
 - Every publishable content entity carries: `slug` (unique, indexed), `published` (boolean, indexed),
   `featured` (boolean), `sort_order` (integer), `seo_title`, `meta_description`, `canonical_url`,
