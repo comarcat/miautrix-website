@@ -42,8 +42,26 @@ class Document extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Media, $this>
+     */
     public function media(): BelongsTo
     {
         return $this->belongsTo(Media::class);
+    }
+
+    /**
+     * Uploading a new version (§9 step 17): swapping media_id on an already-persisted
+     * document bumps version automatically. The prior Media row is never touched here — it
+     * simply becomes unreferenced by this Document, which is what "keep the prior version's
+     * media row intact" means (nothing deletes it).
+     */
+    protected static function booted(): void
+    {
+        static::updating(function (self $document): void {
+            if ($document->exists && $document->isDirty('media_id')) {
+                $document->version = ((int) $document->getOriginal('version')) + 1;
+            }
+        });
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Public\DocumentDownloadController;
 use App\Http\Controllers\Public\MediaController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,5 +20,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // The one path to a private-media file (§5's media-serving contract, §9 step 16) — 404s
 // unless the owning entity is published.
 Route::get('/media/{media}/{filename}', [MediaController::class, 'show'])->name('media.show');
+
+// Streams the current version and increments download_count (§5, §9 step 17) — public only
+// for a published document.
+Route::get('/documents/{document}/download', DocumentDownloadController::class)->name('documents.download');
 
 require __DIR__ . '/settings.php';
