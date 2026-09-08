@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Exceptions\MediaInUseException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
 
@@ -12,6 +13,20 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
  * blueprint §4: a Media row referenced by a *published* entity cannot be hard-deleted.
  * Media that isn't referenced by anything published degrades gracefully instead, via the
  * nullOnDelete foreign keys on the columns listed in $referencingColumns.
+ *
+ * @property int $id
+ * @property string $model_type
+ * @property int $model_id
+ * @property string|null $uuid
+ * @property string $collection_name
+ * @property string $name
+ * @property string $file_name
+ * @property string|null $mime_type
+ * @property string $disk
+ * @property string|null $conversions_disk
+ * @property int $size
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
  */
 class Media extends SpatieMedia
 {
