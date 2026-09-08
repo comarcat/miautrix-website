@@ -194,7 +194,7 @@
       "app/Models/Technology.php",
       "tests/Feature/Schema/CareerSchemaTest.php"
     ],
-    "status": "pending",
+    "status": "done",
     "do": ""
   },
   {
