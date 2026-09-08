@@ -778,7 +778,7 @@ any two would exceed the 6-acceptance-criteria/5-file limit per step).
 | 1 | Scaffold: Laravel + Livewire + Pest, Pint/Larastan/Boost, Vite+Tailwind v4+Alpine | — | `composer.json`, `package.json`, `vite.config.js`, `.env.example` | `pint --test && phpstan analyse && pest && npm run build` all exit 0; boot check 200 |
 | 2 | Git + GitHub: origin, `main`/`develop`, branch protection via REST API | 1 | `.git/config` | `git ls-remote origin main` succeeds, protection state asserted |
 | 3 | GitHub Actions CI: matrix, Postgres service, audits wired in | 2 | `.github/workflows/ci.yml` | workflow parses, pushed branch's CI run succeeds |
-| 4 | Provision Debian 13 LXC: Nginx, PHP-FPM, PostgreSQL, supervisor, UFW | 3 | `infra/provision.sh` | remote check asserts services active, Postgres not reachable off-host |
+| 4 | Provision Debian 13 LXC: Nginx, PHP-FPM, Node, Composer, supervisor, UFW (no local Postgres — external server) | 3 | `infra/provision.sh` | remote check asserts services active, no local PostgreSQL package installed |
 | 5 | Deploy hello-world to production domain over HTTPS behind Cloudflare | 4 | `resources/views/public/hello.blade.php`, `routes/web.php` | `curl` returns 200 with valid cert chain |
 | 6 | Core identity + profile schema + seeder skeleton | 5 | `database/migrations/*_users*`, `*_profiles*`, `database/seeders/DatabaseSeeder.php` | migration + a smoke Pest test pass |
 | 7 | Career schema: companies, experiences, education, certifications, skills, skill_categories, technologies | 6 | 7 migration files, `app/Models/*.php` | migration + Pest model tests pass |
@@ -948,34 +948,32 @@ git tag step-03-ci
 **Do**
 Provision a Debian 13 "trixie" LXC (script `infra/provision.sh`, run once against the target host
 over SSH, host/credentials supplied via `LXC_HOST`/`LXC_SSH_KEY` env vars — never hardcoded):
-install and enable Nginx, PHP-FPM 8.4+ (matching §11's pin), PostgreSQL 18, `supervisor`, UFW
-restricted to 80/443 and a restricted SSH port. PostgreSQL's `postgresql.conf` binds to
-`127.0.0.1` only. **No Redis anywhere on this host.**
+install and enable Nginx, PHP-FPM 8.4+ (matching §11's pin), Node 24 LTS, Composer, `supervisor`,
+UFW restricted to 80/443 and a restricted SSH port; create the `deploy` user and the release
+directory layout. **PostgreSQL is NOT installed here** — the database is a separate, already-running
+server the owner administers (`DB_HOST` in `.env`), confirmed during this build; this LXC is web/app
+tier only. **No Redis anywhere on this host either.**
 
 **Done when**
 1. WHEN the remote host is queried for `systemctl is-active nginx` THE SYSTEM SHALL report `active`.
 2. WHEN queried for `systemctl is-active php8.4-fpm` THE SYSTEM SHALL report `active`.
-3. WHEN queried for `systemctl is-active postgresql` THE SYSTEM SHALL report `active`.
-4. WHEN queried for `systemctl is-active supervisor` THE SYSTEM SHALL report `active`.
-5. WHEN a TCP connection to the LXC's PostgreSQL port is attempted from OFF-HOST THE SYSTEM SHALL be refused (connection refused or timeout, not accepted).
-6. WHEN `ufw status` is queried THE SYSTEM SHALL show only 80, 443, and the configured SSH port as ALLOW.
+3. WHEN queried for `systemctl is-active supervisor` THE SYSTEM SHALL report `active`.
+4. WHEN `ufw status` is queried THE SYSTEM SHALL show only 80, 443, and the configured SSH port as ALLOW.
+5. WHEN the remote host is queried for `command -v psql` or an equivalent PostgreSQL server package THE SYSTEM SHALL confirm none is installed — the database genuinely lives elsewhere, not merely unreachable by accident.
 
 **Verify**
 ```bash
 ssh -i "$LXC_SSH_KEY" "root@$LXC_HOST" '
   systemctl is-active nginx &&
   systemctl is-active php8.4-fpm &&
-  systemctl is-active postgresql &&
   systemctl is-active supervisor
 '                                                   # expect: exit 0, each prints "active"
 
-timeout 3 bash -c "cat < /dev/null > /dev/tcp/$LXC_HOST/5432" ; test $? -ne 0
-                                                    # expect: exit 0 — the inner connection was refused/timed out
-
-ssh -i "$LXC_SSH_KEY" "root@$LXC_HOST" 'ufw status | grep -E "^(80|443|22)"' | wc -l
-                                                    # expect: prints a number ≥ 3 (each rule present); asserted below
 test "$(ssh -i "$LXC_SSH_KEY" "root@$LXC_HOST" 'ufw status | grep -cE "ALLOW"')" -ge 3
                                                     # expect: exit 0
+
+ssh -i "$LXC_SSH_KEY" "root@$LXC_HOST" '! dpkg -l | grep -qi postgresql-'
+                                                    # expect: exit 0 — no local PostgreSQL server package
 ```
 
 **Checkpoint**
