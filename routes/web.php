@@ -1,14 +1,20 @@
 <?php
 
+use App\Http\Controllers\Public\AboutController;
 use App\Http\Controllers\Public\DocumentDownloadController;
+use App\Http\Controllers\Public\ExperienceController;
+use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\MediaController;
+use App\Http\Controllers\Public\SkillsController;
 use App\Http\Controllers\Public\ThemeController;
 use Illuminate\Support\Facades\Route;
 
-// Minimal hello-world for step 5 (blueprint §9) — proves the real domain is live over HTTPS,
-// served by PHP-FPM, before any feature work exists. Replaced by the real design system's home
-// page in epic 04.
-Route::view('/', 'public.hello')->name('home');
+// The real design system's home page (E4-T4, §9 step 22) — replaces the step-5 hello-world
+// placeholder that lived here (public.hello) from before any feature work existed.
+Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/about', [AboutController::class, 'index'])->name('about');
+Route::get('/experience', [ExperienceController::class, 'index'])->name('experience');
+Route::get('/skills', [SkillsController::class, 'index'])->name('skills');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
