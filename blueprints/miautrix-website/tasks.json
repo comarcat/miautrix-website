@@ -223,7 +223,7 @@
       "app/Models/ProjectCategory.php",
       "tests/Feature/Schema/ProjectSchemaTest.php"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T4",
