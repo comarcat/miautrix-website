@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasAutoSlug;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,7 +35,7 @@ use Illuminate\Support\Carbon;
  */
 class Certification extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasAutoSlug, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'profile_id',
@@ -70,5 +71,10 @@ class Certification extends Model
     public function profile(): BelongsTo
     {
         return $this->belongsTo(Profile::class);
+    }
+
+    protected function slugSource(): string
+    {
+        return $this->name;
     }
 }
