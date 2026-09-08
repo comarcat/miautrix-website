@@ -35,6 +35,10 @@ Thumbs.db
 /storage/backups
 *.tar.gz
 
+# Ad-hoc visual review snapshots (design-review skill / manual screenshots) — not a
+# deliverable of any task, never meant to be committed.
+/design-review
+
 # NOT ignored on purpose — these are committed and the blueprint depends on it:
 #   .env.example          (negated above, after the .env* patterns)
 #   .claude/              (agent workspace)

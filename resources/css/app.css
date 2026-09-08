@@ -228,6 +228,13 @@ body {
     font-family: var(--font-sans);
 }
 
+/* Alpine's own convention (E4-T3): hides an element until Alpine has initialized, so
+   x-show="false" elements (toast, modal, image-gallery lightbox) don't flash visible for one
+   frame before Alpine's first tick removes this attribute. */
+[x-cloak] {
+    display: none !important;
+}
+
 /* Motion (§7): subtle scroll-reveal only, no transition at all when the visitor has asked
    for reduced motion — the revealed state applies immediately instead. */
 @media (prefers-reduced-motion: reduce) {
