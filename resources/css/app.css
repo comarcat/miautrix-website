@@ -3,9 +3,238 @@
 @source '../views';
 
 /*
- * This blueprint's design system (two swappable themes: Technical + Matrix) lands in
- * epic 04 (steps 19-20). Deliberately minimal here — E1-T1's only job is a working
- * Tailwind v4 pipeline. The starter kit's Flux-based theme (flux.css import, zinc
- * palette, [data-flux-*] selectors) was removed: this project does not use Flux
- * (blueprint §2/decision log) and builds its own component set instead.
+ * This blueprint's design system: two swappable themes sharing one Blade component set
+ * (§7) — only CSS custom-property VALUES differ, never a themes/technical/ vs
+ * themes/matrix/ component tree. The starter kit's Flux-based theme (flux.css import,
+ * zinc palette, [data-flux-*] selectors) was removed: this project does not import
+ * Flux's own CSS (blueprint §2/decision log) — Flux components are still used as
+ * unstyled primitives on the leftover starter-kit dashboard/settings pages, which are
+ * outside this design system's scope (the real admin experience is Filament).
+ *
+ * Semantic tokens (--background, --foreground, etc.) hold the actual color VALUES and
+ * are what a [data-theme] selector or a prefers-color-scheme query overrides. The
+ * @theme block below only maps them into Tailwind's own utility namespace once — a
+ * component uses `bg-background`/`text-foreground`/etc., never a raw hex value or a
+ * `dark:` variant (theme switching is data-theme-driven, not Tailwind's dark mode).
  */
+
+@theme {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-primary: var(--primary);
+    --color-on-primary: var(--on-primary);
+    --color-secondary: var(--secondary);
+    --color-on-secondary: var(--on-secondary);
+    --color-accent: var(--accent);
+    --color-accent-text: var(--accent-text);
+    --color-on-accent: var(--on-accent);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-on-destructive: var(--on-destructive);
+    --color-ring: var(--ring);
+
+    /* Typography (§7) — IBM Plex Sans for display/heading/body, JetBrains Mono for
+       metadata/labels/badges/code. Self-hosted woff2 in public/fonts/, never fetched
+       from Google's CDN at request time. */
+    --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+    --text-display: 48px;
+    --text-display--line-height: 1.2;
+    --text-display--font-weight: 700;
+    --text-heading-1: 32px;
+    --text-heading-1--line-height: 1.3;
+    --text-heading-1--font-weight: 600;
+    --text-heading-2: 24px;
+    --text-heading-2--line-height: 1.3;
+    --text-heading-2--font-weight: 600;
+    --text-heading-3: 18px;
+    --text-heading-3--line-height: 1.3;
+    --text-heading-3--font-weight: 600;
+    --text-body: 16px;
+    --text-body--line-height: 1.5;
+    --text-mono: 14px;
+    --text-mono--line-height: 1.4;
+
+    /* Spacing scale (§7): 4/8/12/16/24/32/48/64px — Tailwind's own default scale
+       already covers these exactly (1=4px, 2=8px, 3=12px, 4=16px, 6=24px, 8=32px,
+       12=48px, 16=64px), so no override is needed here; noted for traceability. */
+
+    --radius-input: 8px;
+    --radius-card: 12px;
+    --radius-full: 9999px;
+
+    --shadow-elevation-1: 0 1px 2px rgb(0 0 0 / 0.06);
+    --shadow-elevation-2: 0 4px 12px rgb(0 0 0 / 0.10);
+    /* Matrix-only accent glow — applied selectively (focus/hover on interactive
+       elements only, never body containers), not a global shadow token override. */
+    --shadow-matrix-glow: 0 0 8px rgb(0 255 65 / 0.15);
+
+    --breakpoint-xs: 375px;
+    --container-content: 1280px;
+}
+
+/* Theme A "Technical" (default) — light values, respects prefers-color-scheme for dark. */
+:root {
+    --background: #FAFAFA;
+    --foreground: #09090B;
+    --card: #FFFFFF;
+    --card-foreground: #09090B;
+    --primary: #18181B;
+    --on-primary: #FFFFFF;
+    --secondary: #3F3F46;
+    --on-secondary: #FFFFFF;
+    --accent: #2563EB;
+    --accent-text: #2563EB;
+    --on-accent: #FFFFFF;
+    --muted: #E8ECF0;
+    --muted-foreground: #475569;
+    --border: #E4E4E7;
+    --destructive: #DC2626;
+    --on-destructive: #FFFFFF;
+    --ring: #2563EB;
+}
+
+/* Theme A dark (prefers-color-scheme) — never applies once [data-theme="matrix"] is set;
+   the switcher's whole point is that Matrix always wins regardless of system preference. */
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='matrix']) {
+        --background: #09090B;
+        --foreground: #FAFAFA;
+        --card: #111113;
+        --card-foreground: #FAFAFA;
+        --primary: #FAFAFA;
+        --on-primary: #09090B;
+        --secondary: #A1A1AA;
+        --on-secondary: #09090B;
+        --accent: #3B82F6;
+        --accent-text: #60A5FA;
+        --on-accent: #FFFFFF;
+        --muted: #1C1C1F;
+        --muted-foreground: #A1A1AA;
+        --border: #27272A;
+        --destructive: #F87171;
+        --on-destructive: #09090B;
+        --ring: #60A5FA;
+    }
+}
+
+/* Theme B "Matrix" (always dark; the switcher UI makes the override obvious — §7). Set via
+   data-theme="matrix" on <html>, read server-side from the miautrix_theme cookie by
+   ResolveTheme middleware — zero-flash because the attribute is correct on the very first
+   response, never toggled client-side after paint. */
+[data-theme='matrix'] {
+    --background: #000000;
+    --foreground: #E0E0E0;
+    --card: #0C130E;
+    --card-foreground: #E0E0E0;
+    --primary: #00FF41;
+    --on-primary: #0F172A;
+    --secondary: #0D0D0D;
+    --on-secondary: #FFFFFF;
+    --accent: #00FF41;
+    --accent-text: #00FF41;
+    --on-accent: #000000;
+    --muted: #181818;
+    --muted-foreground: #94A3B8;
+    --border: #1F1F1F;
+    --destructive: #EF4444;
+    --on-destructive: #FFFFFF;
+    --ring: #00FF41;
+}
+
+/* Self-hosted fonts (§7) — woff2 only, font-display: swap, weights actually used by the
+   type scale above. Files live in public/fonts/; the 400 and 600 IBM Plex Sans weights are
+   additionally preloaded in the base layout (used above the fold on every page). */
+@font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('/fonts/ibm-plex-sans-300.woff2') format('woff2');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('/fonts/ibm-plex-sans-400.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('/fonts/ibm-plex-sans-500.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('/fonts/ibm-plex-sans-600.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'IBM Plex Sans';
+    src: url('/fonts/ibm-plex-sans-700.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('/fonts/jetbrains-mono-400.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('/fonts/jetbrains-mono-500.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('/fonts/jetbrains-mono-600.woff2') format('woff2');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('/fonts/jetbrains-mono-700.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+}
+
+/* Motion (§7): subtle scroll-reveal only, no transition at all when the visitor has asked
+   for reduced motion — the revealed state applies immediately instead. */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
