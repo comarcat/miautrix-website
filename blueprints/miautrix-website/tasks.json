@@ -286,7 +286,7 @@
       "app/Listeners/LogLoginAttempt.php",
       "tests/Feature/Auth/MfaTest.php"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E2-T6",

@@ -167,7 +167,10 @@ return [
         Features::twoFactorAuthentication([
             'confirm' => true,
             'confirmPassword' => true,
-            // 'window' => 0
+            // 1 time-step (30s) of tolerance either side, per blueprint §9 step 10 — MFA is
+            // mandatory for admin access, so a small clock-skew allowance avoids a legitimate
+            // enrolment being rejected over a device's clock drift.
+            'window' => 1,
         ]),
         Features::passkeys([
             'confirmPassword' => true,
