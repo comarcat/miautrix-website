@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Public\DocumentDownloadController;
 use App\Http\Controllers\Public\MediaController;
+use App\Http\Controllers\Public\ThemeController;
 use Illuminate\Support\Facades\Route;
 
 // Minimal hello-world for step 5 (blueprint §9) — proves the real domain is live over HTTPS,
@@ -24,5 +25,9 @@ Route::get('/media/{media}/{filename}', [MediaController::class, 'show'])->name(
 // Streams the current version and increments download_count (§5, §9 step 17) — public only
 // for a published document.
 Route::get('/documents/{document}/download', DocumentDownloadController::class)->name('documents.download');
+
+// Sets the miautrix_theme cookie and redirects back (§9 step 20) — a plain form POST, not
+// a fetch call, so the browser's own navigation is what reloads the page with no flash.
+Route::post('/theme', [ThemeController::class, 'update'])->name('theme.set');
 
 require __DIR__ . '/settings.php';

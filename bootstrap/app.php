@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ResolveTheme;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,7 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // ResolveTheme shares $theme with every web-group view (E4-T2, §9 step 20) — the
+        // public pages, dashboard, and settings pages all resolve through this group.
+        // Filament's admin panel builds its own separate middleware stack in
+        // AdminPanelProvider and never touches $theme, so it is untouched here.
+        $middleware->web(append: [ResolveTheme::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
