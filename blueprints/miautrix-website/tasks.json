@@ -562,7 +562,8 @@
       "resources/css/app.css",
       "tests/Feature/Theme/ThemeSwitchTest.php"
     ],
-    "status": "pending"
+    "status": "done",
+    "note": "2026-09-08: the Matrix @theme token block was already written in full during E4-T1 (both themes' hex values were authored up front, per that task's own decision log entry). This task's actual scope was the SSR-correct switching mechanism: ResolveTheme middleware (View::share, appended to the web middleware group in bootstrap/app.php), a plain-form-POST ThemeController (no fetch/JS needed for zero-flash — the browser's own navigation is the reload), and the theme-switcher component wired back into the E4-T1 layout. No real public page renders the layout yet (lands in E4-T4/T5/T6), so ThemeSwitchTest exercises a throwaway route registered through the real `web` middleware group rather than route('home') (which still serves the E1-T1 placeholder)."
   },
   {
     "id": "E4-T3",

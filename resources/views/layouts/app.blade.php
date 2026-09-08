@@ -35,8 +35,8 @@
                 {{-- The rest of the site nav (About/Experience/Skills/Projects/Blog/Contact)
                      lands as each of those routes is actually built (E4-T4/T5/T6) — a link to
                      a route that doesn't exist yet would itself be a broken-by-construction
-                     bug, not a placeholder worth shipping. Theme switcher lands in E4-T2 —
-                     this task (E4-T1) is explicitly scoped to Theme A only. --}}
+                     bug, not a placeholder worth shipping. --}}
+                <x-theme-switcher :theme="$theme ?? 'technical'" />
             </nav>
         </div>
     </header>
