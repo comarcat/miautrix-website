@@ -2,16 +2,18 @@
 
 namespace App\Filament\Resources\Projects\Schemas;
 
+use App\Filament\Schemas\HasSeoFields;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class ProjectForm
 {
+    use HasSeoFields;
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
@@ -48,23 +50,7 @@ class ProjectForm
                     ->required()
                     ->numeric()
                     ->default(0),
-                Section::make('SEO')
-                    ->collapsed()
-                    ->components([
-                        TextInput::make('seo_title'),
-                        TextInput::make('meta_description')
-                            ->maxLength(500),
-                        TextInput::make('canonical_url')
-                            ->url(),
-                        TextInput::make('og_title'),
-                        TextInput::make('og_description')
-                            ->maxLength(500),
-                        // Real media picker lands in E3-T4 — og_image_id is a plain FK to
-                        // media.id, not a stored file path (see ExperienceForm's note).
-                        TextInput::make('og_image_id')
-                            ->numeric()
-                            ->helperText('Media ID — a real picker replaces this in E3-T4.'),
-                    ]),
+                self::seoFieldsSection(),
             ]);
     }
 }

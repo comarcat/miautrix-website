@@ -503,7 +503,7 @@
       "app/Filament/Schemas/HasSeoFields.php",
       "tests/Feature/Filament/ArticleResourceTest.php"
     ],
-    "status": "pending",
+    "status": "done",
     "note": "2026-09-08: the articles migration, App\\Models\\Article, and its published() scope were built in E2-T6 instead — E2-T6's own ArticlePolicy and E2-T7's article seeding both needed the table to exist much earlier than this task's original position in the bundle. Verified there already: migrate creates `articles` per §4, and Article::published() correctly gates on published_at (null/future excluded, past included). This task is now Filament-resource-only; its first two original acceptance criteria (migration + scope) are dropped as already satisfied, not re-verified here."
   },
   {
