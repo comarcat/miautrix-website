@@ -60,6 +60,18 @@ return [
             'report' => false,
         ],
 
+        // Every upload (media library files, documents/resume) lands here, not on `public`
+        // (§9 step 16). No `url` key and `serve` left unset: this disk is never exposed
+        // directly — MediaController is the only path to a file here, and it 404s unless the
+        // owning entity is published. `.env`'s MEDIA_DISK already pointed at this name before
+        // this disk existed (step 1's scaffold); it just had nowhere to resolve to until now.
+        'private-media' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private-media'),
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

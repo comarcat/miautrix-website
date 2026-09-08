@@ -451,7 +451,7 @@
       "config/filesystems.php",
       "tests/Feature/Media/UploadValidationTest.php"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T5",

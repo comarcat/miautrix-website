@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Public\MediaController;
 use Illuminate\Support\Facades\Route;
 
 // Minimal hello-world for step 5 (blueprint §9) — proves the real domain is live over HTTPS,
@@ -14,5 +15,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 // /admin itself is now Filament's (E3-T1, app/Providers/Filament/AdminPanelProvider.php) —
 // the E2-T5 placeholder route that used to live here is gone; EnsureMfaConfirmed is wired
 // onto the panel's own authMiddleware instead.
+
+// The one path to a private-media file (§5's media-serving contract, §9 step 16) — 404s
+// unless the owning entity is published.
+Route::get('/media/{media}/{filename}', [MediaController::class, 'show'])->name('media.show');
 
 require __DIR__ . '/settings.php';
