@@ -134,7 +134,7 @@
       "resources/views/public/hello.blade.php",
       "routes/web.php"
     ],
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "E2-T1",
