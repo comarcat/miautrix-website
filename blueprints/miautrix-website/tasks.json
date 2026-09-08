@@ -619,7 +619,8 @@
       "resources/views/public/skills.blade.php",
       "tests/Feature/Public/CorePagesTest.php"
     ],
-    "status": "pending"
+    "status": "done",
+    "note": "2026-09-08: also added the thin controllers (app/Http/Controllers/Public/{Home,About,Experience,Skills}Controller.php, not separately named in this task's files array but necessary to route to the 4 views) and removed the E1-T1 hello-world placeholder (resources/views/public/hello.blade.php + its Route::view('/', ...)) — routes/web.php's own comment already documented that home.blade.php replaces it in epic 04. Nav in layouts/app.blade.php gained About/Experience/Skills links now that those routes exist. Featured-project cards deliberately don't link to /projects/{slug} yet (E4-T5, not built until the next task) — a link to a route that doesn't exist would be broken-by-construction."
   },
   {
     "id": "E4-T5",
