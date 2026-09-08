@@ -88,6 +88,15 @@ if [ -n "$DEPLOY_PUBKEY" ]; then
   chown "$DEPLOY_USER:$DEPLOY_USER" "$AUTH_KEYS"
 fi
 
+# infra/deploy.sh's REMOTE_RESTART step runs these two commands as $DEPLOY_USER via sudo — grant
+# exactly those, passwordless, nothing broader. A blanket NOPASSWD:ALL would let a compromised
+# deploy key do anything root can; this scopes it to the two reloads deploy actually needs.
+cat > /etc/sudoers.d/deploy-reload <<SUDOERS
+${DEPLOY_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl reload php8.4-fpm, /usr/bin/systemctl reload nginx, /usr/bin/supervisorctl restart queue-worker
+SUDOERS
+chmod 440 /etc/sudoers.d/deploy-reload
+visudo -cf /etc/sudoers.d/deploy-reload
+
 echo "==> firewall (80, 443, 22 only)"
 ufw allow 22/tcp
 ufw allow 80/tcp
@@ -135,7 +144,7 @@ echo "==> nginx vhost for ${APP_DOMAIN}"
 cat > "/etc/nginx/sites-available/miautrix" <<NGINX
 server {
     listen 80;
-    server_name ${APP_DOMAIN};
+    server_name ${APP_DOMAIN} www.${APP_DOMAIN};
     root ${DEPLOY_PATH}/current/public;
 
     add_header X-Content-Type-Options "nosniff" always;
