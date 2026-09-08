@@ -424,7 +424,7 @@
       "app/Filament/Resources/SkillCategoryResource.php",
       "tests/Feature/Filament/ResourceSet2Test.php"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T4",
