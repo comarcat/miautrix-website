@@ -366,7 +366,7 @@
       "app/Providers/Filament/AdminPanelProvider.php",
       "tests/Feature/Filament/PanelBootTest.php"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T2",

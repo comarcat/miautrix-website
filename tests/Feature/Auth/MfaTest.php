@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PragmaRX\Google2FA\Google2FA;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -18,6 +19,7 @@ class MfaTest extends TestCase
     public function test_a_user_without_confirmed_mfa_requesting_admin_is_redirected_to_the_enrolment_screen(): void
     {
         $user = User::factory()->create(); // two_factor_confirmed_at null by default
+        $this->assignSuperAdmin($user);
 
         $response = $this->actingAs($user)->get('/admin');
 
@@ -27,10 +29,23 @@ class MfaTest extends TestCase
     public function test_a_user_with_confirmed_mfa_can_reach_admin(): void
     {
         $user = User::factory()->withTwoFactor()->create();
+        $this->assignSuperAdmin($user);
 
         $response = $this->actingAs($user)->get('/admin');
 
         $response->assertOk();
+    }
+
+    /**
+     * /admin is Filament's real panel as of E3-T1 — Filament's own Authenticate middleware
+     * 403s any user that doesn't implement canAccessPanel() truthfully (User::canAccessPanel
+     * checks hasRole('super_admin')), independently of and before EnsureMfaConfirmed ever
+     * runs. These MFA tests care about the MFA gate specifically, so every user reaching
+     * /admin here needs the role first, same as PolicyTest and PanelBootTest.
+     */
+    private function assignSuperAdmin(User $user): void
+    {
+        $user->assignRole(Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']));
     }
 
     public function test_confirming_a_valid_totp_code_at_enrolment_sets_two_factor_confirmed_at_and_shows_recovery_codes(): void
