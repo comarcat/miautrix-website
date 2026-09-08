@@ -342,7 +342,7 @@
       "database/seeders/DatabaseSeeder.php",
       "tests/Feature/Schema/SeederTest.php"
     ],
-    "status": "pending"
+    "status": "done"
   },
   {
     "id": "E3-T1",
