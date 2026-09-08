@@ -104,18 +104,26 @@ ufw allow 443/tcp
 ufw --force enable
 
 echo "==> release directory structure"
+# storage/ is owned by $DEPLOY_USER but GROUP-writable by www-data: PHP-FPM runs as www-data
+# (Laravel writes sessions/cache/logs at request time), while $DEPLOY_USER (deploy-time,
+# composer/artisan over SSH) is already a member of the www-data group from the usermod call
+# above. Owner-only 755 here was a real bug — PHP-FPM couldn't write anything, so every request
+# 500'd with nothing in Laravel's own log (it couldn't write that either). setgid keeps new
+# files/dirs created later inheriting the www-data group instead of whichever process made them.
 install -d -o "$DEPLOY_USER" -g "$DEPLOY_USER" \
   "$DEPLOY_PATH" \
   "$DEPLOY_PATH/releases" \
   "$DEPLOY_PATH/shared" \
+  "$DEPLOY_PATH/bin"
+install -d -o "$DEPLOY_USER" -g www-data -m 2775 \
   "$DEPLOY_PATH/shared/storage" \
   "$DEPLOY_PATH/shared/storage/app" \
   "$DEPLOY_PATH/shared/storage/app/private-media" \
+  "$DEPLOY_PATH/shared/storage/framework" \
   "$DEPLOY_PATH/shared/storage/framework/cache" \
   "$DEPLOY_PATH/shared/storage/framework/sessions" \
   "$DEPLOY_PATH/shared/storage/framework/views" \
-  "$DEPLOY_PATH/shared/storage/logs" \
-  "$DEPLOY_PATH/bin"
+  "$DEPLOY_PATH/shared/storage/logs"
 
 echo "==> rollback.sh (repoints 'current' at the previous release — never reverses a migration)"
 cat > "$DEPLOY_PATH/bin/rollback.sh" <<'ROLLBACK'
