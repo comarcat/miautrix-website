@@ -6,11 +6,18 @@
 # nothing is rsynced from this machine except the SSH command that triggers it.
 #
 # Usage:
-#   set -a; . ./.env; set +a
 #   bash infra/deploy.sh
 #
-# Reads from .env: LXC_HOST, LXC_SSH_KEY, DEPLOY_PATH, DEPLOY_USER, DEPLOY_PORT,
-# GITHUB_REPO_URL, APP_DOMAIN.
+# Deliberately does NOT ask the caller to `source .env` first — that was tried and produced a
+# reproducible, unexplained Pest failure (9 auth tests, 419/CSRF and missing-notification
+# errors) despite phpunit.xml's testing overrides carrying force="true". Root cause not fully
+# isolated after exhausting individual and combined env-var bisection; the practical fix is
+# structural instead: the local gate (step 1) needs none of .env's values, so this script loads
+# .env itself, AFTER the gate runs clean, not before. Never `set -a; . ./.env` before invoking
+# this script.
+#
+# Reads from .env (loaded internally, after the gate): LXC_HOST, LXC_SSH_KEY, DEPLOY_PATH,
+# DEPLOY_USER, DEPLOY_PORT, GITHUB_REPO_URL, APP_DOMAIN.
 #
 # What this does NOT do:
 #   - Never `php artisan migrate:fresh` or `db:wipe` — migrations are expand-only. A
@@ -21,6 +28,18 @@
 #   - Never skips the local gate below — a red gate must never reach the server.
 
 set -euo pipefail
+
+echo "==> 1/8 local gate must be green before anything touches the server (no .env loaded yet)"
+./vendor/bin/pint --test
+./vendor/bin/phpstan analyse
+npm run build
+./vendor/bin/pest
+
+echo "==> loading .env now that the gate passed clean"
+set -a
+# shellcheck disable=SC1091
+. ./.env
+set +a
 
 : "${LXC_HOST:?Set in .env}"
 : "${LXC_SSH_KEY:?Set in .env}"
@@ -33,12 +52,6 @@ set -euo pipefail
 BRANCH="${DEPLOY_BRANCH:-main}"
 SSH_OPTS=(-i "$LXC_SSH_KEY" -p "$DEPLOY_PORT" -o StrictHostKeyChecking=accept-new)
 REMOTE="$DEPLOY_USER@$LXC_HOST"
-
-echo "==> 1/8 local gate must be green before anything touches the server"
-./vendor/bin/pint --test
-./vendor/bin/phpstan analyse
-./vendor/bin/pest
-npm run build
 
 echo "==> 2/8 confirm we are deploying a commit CI actually ran"
 CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
@@ -124,7 +137,6 @@ ls -1dt */ 2>/dev/null | tail -n +6 | xargs -r rm -rf
 REMOTE_PRUNE
 
 echo "==> verifying from the build machine"
-set -a; . ./.env; set +a
 test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/")" = 200
 test "$(curl -sS -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/up")" = 200
 curl -sS "https://$APP_DOMAIN/up" | jq -e '.database == "ok"'
