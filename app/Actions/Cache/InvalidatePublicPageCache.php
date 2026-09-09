@@ -89,4 +89,15 @@ class InvalidatePublicPageCache
             $this->__invoke($routePath);
         }
     }
+
+    /**
+     * Found in review: a new/edited Skill (or SkillCategory — renaming one changes what the
+     * /skills page groups under) never showed up on the public page, because neither model
+     * had an observer at all — the exact same gap Article/Setting/SocialProfile had before
+     * their own observers were added.
+     */
+    public function forSkills(): void
+    {
+        $this->__invoke('skills');
+    }
 }

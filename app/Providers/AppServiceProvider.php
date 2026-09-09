@@ -6,10 +6,14 @@ use App\Contracts\AnalyticsProviderInterface;
 use App\Models\Article;
 use App\Models\Project;
 use App\Models\Setting;
+use App\Models\Skill;
+use App\Models\SkillCategory;
 use App\Models\SocialProfile;
 use App\Observers\ArticleObserver;
 use App\Observers\ProjectObserver;
 use App\Observers\SettingObserver;
+use App\Observers\SkillCategoryObserver;
+use App\Observers\SkillObserver;
 use App\Observers\SocialProfileObserver;
 use App\Support\Analytics\NullAnalyticsProvider;
 use Carbon\CarbonImmutable;
@@ -84,6 +88,12 @@ class AppServiceProvider extends ServiceProvider
         // busts every one of those cache entries on any SocialProfile save/delete (see
         // SocialProfileObserver's own docblock).
         SocialProfile::observe(SocialProfileObserver::class);
+
+        // Found in review: a new/edited Skill (or its category) never appeared on the
+        // public /skills page — that page had no observer at all, same gap as the others
+        // above (see SkillObserver/SkillCategoryObserver's own docblocks).
+        Skill::observe(SkillObserver::class);
+        SkillCategory::observe(SkillCategoryObserver::class);
     }
 
     /**
