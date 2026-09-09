@@ -16,40 +16,79 @@ use Symfony\Component\HttpFoundation\Response;
  * CSS/JS, self-hosted fonts per §7, no third-party embeds per Non-Goal #12) — so `'self'`
  * covers script/style/font/img/connect without needing any external host allowlisted.
  *
- * 'unsafe-eval' and 'unsafe-inline' on script-src are both real, deliberate trade-offs, found
- * missing one at a time in production review — this app's own views have no inline <script>
- * (grepped to confirm) other than `<script type="application/ld+json">`, which script-src
- * does not gate at all (a data block, never executed), so neither is needed for anything this
- * app wrote. Both are needed for Filament's own bundled admin UI:
- * - 'unsafe-eval': Alpine.js (bundled in Livewire, used throughout Filament for every
- *   `x-data`/`x-bind`/`x-on` expression, including ones Filament generates at runtime like
- *   `filamentSchema(...)`) evaluates directive expressions via the `Function` constructor by
- *   default. Without it, every one of those throws an EvalError, silently swallowed: the
- *   admin login button spins forever (Livewire's processing state can't be read) and the
- *   password-reveal toggle can't bind `type="password"` at all (shows the raw value).
- * - 'unsafe-inline': Filament ships its own inline bootstrap `<script>` tags per-page (FOUC
- *   prevention for dark-mode/sidebar-collapsed state, evaluated before Alpine loads) — a
- *   different one on the login page than on an authenticated panel page, so allowlisting by
- *   hash isn't practical (it would need updating for every Filament page and every Filament
- *   version). Without it, that bootstrap script never runs and the panel's own layout breaks
- *   (found via the authenticated settings page rendering with its sidebar collapsed onto/
- *   overlapping the main content).
- * Alpine ships a CSP-safe build that avoids the eval need, but Filament's own internals were
- * not written against that restricted evaluator (they call named JS functions dynamically,
- * which the CSP-safe build does not support) — adopting it would mean reworking Filament's
- * own bundled assets, not just this app's code. A `style="..."` attribute does still exist on
- * one starter-kit page, hence 'unsafe-inline' on style-src too (already present, unrelated to
- * the two script-src additions above).
+ * BUG FIXED (found in a real Exploita security-headers scan, graded C, CSP flagged
+ * "misconfigured"/critical): 'unsafe-eval' and 'unsafe-inline' on script-src used to be sent
+ * on EVERY response, public site included — but neither is needed anywhere except Filament's
+ * own bundled admin UI (see PANEL_CSP's docblock below). Sending them site-wide defeats CSP's
+ * actual purpose (its whole point is blocking exactly this) on the pages that need it least:
+ * the public site has no inline <script> of its own (grepped to confirm) other than
+ * `<script type="application/ld+json">`, which script-src does not gate at all (a data block,
+ * never executed), and no `x-data`/Alpine usage at all. Now split in two: PUBLIC_CSP (strict,
+ * everything but /admin) and PANEL_CSP (relaxed, /admin only — Filament's own panel path, see
+ * AdminPanelProvider::path()).
+ *
  * HSTS is only sent over an actual HTTPS connection — sending it over plain HTTP achieves
  * nothing (browsers ignore it per spec) and would just be noise in local dev. Production sits
  * behind Cloudflare terminating TLS and proxying to nginx over plain HTTP, so
  * `Request::secure()` alone is always false there — checked via X-Forwarded-Proto too
  * (security-auditor finding: without this, HSTS silently never sends in production at all,
  * a fail-open on exactly the header meant to prevent a downgrade).
+ *
+ * The rest of the headers below were the scan's other findings:
+ * - X-Frame-Options / frame-ancestors already covered clickjacking via CSP alone in modern
+ *   browsers, but the legacy header was still flagged "missing" (high) — cheap to add for
+ *   browsers that don't honor frame-ancestors.
+ * - Permissions-Policy / Cross-Origin-Opener-Policy / Cross-Origin-Resource-Policy /
+ *   Cross-Origin-Embedder-Policy: all safe to set unconditionally, since (per Non-Goal #12
+ *   above) nothing on this site is embedded cross-origin, embeds anything cross-origin, or
+ *   needs a third-party browser feature (camera/mic/geolocation/etc — the contact form is a
+ *   plain text form, nothing here uses any of them).
+ * - X-XSS-Protection: the header itself is obsolete (no modern browser honors the legacy
+ *   filter it controlled, and that filter had its own real XSS-bypass history) — current
+ *   guidance is to send `0` explicitly (disable it) rather than omit the header or set `1`.
+ * - X-DNS-Prefetch-Control: off — nothing on the site benefits from prefetching visited-link
+ *   domains, so there's no reason to let it leak browsing patterns to the resolver.
+ * - X-Content-Type-Options and Referrer-Policy were flagged "misconfigured" with a literal
+ *   duplicated value ("nosniff, nosniff") — root cause was nginx's vhost (infra/provision.sh)
+ *   *also* adding both via `add_header`, on top of this middleware setting them for every
+ *   response already (nginx's `add_header` appends rather than replaces, since the upstream
+ *   PHP-FPM response already carries its own copy) — removed from nginx, this middleware is
+ *   now the single source for both, on every response including Filament's panel.
  */
 class SecurityHeaders
 {
-    private const CSP = "default-src 'self'; "
+    private const PUBLIC_CSP = "default-src 'self'; "
+        . "script-src 'self'; "
+        . "style-src 'self' 'unsafe-inline'; "
+        . "font-src 'self'; "
+        . "img-src 'self' data:; "
+        . "connect-src 'self'; "
+        . "object-src 'none'; "
+        . "base-uri 'self'; "
+        . "form-action 'self'; "
+        . "frame-ancestors 'self';";
+
+    /**
+     * Relaxed only where Filament's own bundled admin UI actually needs it:
+     * - 'unsafe-eval': Alpine.js (bundled in Livewire, used throughout Filament for every
+     *   `x-data`/`x-bind`/`x-on` expression, including ones Filament generates at runtime like
+     *   `filamentSchema(...)`) evaluates directive expressions via the `Function` constructor
+     *   by default. Without it, every one of those throws an EvalError, silently swallowed:
+     *   the admin login button spins forever (Livewire's processing state can't be read) and
+     *   the password-reveal toggle can't bind `type="password"` at all (shows the raw value).
+     * - 'unsafe-inline': Filament ships its own inline bootstrap `<script>` tags per-page
+     *   (FOUC prevention for dark-mode/sidebar-collapsed state, evaluated before Alpine loads)
+     *   — a different one on the login page than on an authenticated panel page, so
+     *   allowlisting by hash isn't practical (it would need updating for every Filament page
+     *   and every Filament version). Without it, that bootstrap script never runs and the
+     *   panel's own layout breaks (found via the authenticated settings page rendering with
+     *   its sidebar collapsed onto/overlapping the main content).
+     * Alpine ships a CSP-safe build that avoids the eval need, but Filament's own internals
+     * were not written against that restricted evaluator (they call named JS functions
+     * dynamically, which the CSP-safe build does not support) — adopting it would mean
+     * reworking Filament's own bundled assets, not just this app's code.
+     */
+    private const PANEL_CSP = "default-src 'self'; "
         . "script-src 'self' 'unsafe-eval' 'unsafe-inline'; "
         . "style-src 'self' 'unsafe-inline'; "
         . "font-src 'self'; "
@@ -60,13 +99,26 @@ class SecurityHeaders
         . "form-action 'self'; "
         . "frame-ancestors 'self';";
 
+    private const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=(), '
+        . 'usb=(), browsing-topics=(), attribution-reporting=()';
+
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
 
-        $response->headers->set('Content-Security-Policy', self::CSP);
+        $response->headers->set(
+            'Content-Security-Policy',
+            $request->is('admin*') ? self::PANEL_CSP : self::PUBLIC_CSP,
+        );
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+        $response->headers->set('Permissions-Policy', self::PERMISSIONS_POLICY);
+        $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
+        $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
+        $response->headers->set('Cross-Origin-Embedder-Policy', 'require-corp');
+        $response->headers->set('X-XSS-Protection', '0');
+        $response->headers->set('X-DNS-Prefetch-Control', 'off');
 
         if ($request->secure() || $request->header('X-Forwarded-Proto') === 'https') {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');

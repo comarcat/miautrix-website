@@ -20,17 +20,25 @@ class HeadersTest extends TestCase
         $response->assertOk();
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
         $response->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+        $response->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+        $response->assertHeader('Cross-Origin-Opener-Policy', 'same-origin');
+        $response->assertHeader('Cross-Origin-Resource-Policy', 'same-origin');
+        $response->assertHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+        $response->assertHeader('X-XSS-Protection', '0');
+        $response->assertHeader('X-DNS-Prefetch-Control', 'off');
+        $this->assertNotNull($response->headers->get('Permissions-Policy'));
 
         $csp = $response->headers->get('Content-Security-Policy');
         $this->assertNotNull($csp);
         $this->assertStringContainsString("default-src 'self'", $csp);
-        // 'unsafe-eval' and 'unsafe-inline' are both required by Filament's own bundled admin
-        // UI (see SecurityHeaders' docblock) — without them, the admin panel silently breaks:
-        // the login button spins forever, the password field can't hide its own value, and an
-        // authenticated panel page's own per-page inline bootstrap script never runs, breaking
-        // the sidebar layout.
-        $this->assertStringContainsString("script-src 'self' 'unsafe-eval' 'unsafe-inline'", $csp);
-        $this->assertStringContainsString("style-src 'self' 'unsafe-inline'", $csp);
+        // The public site has no inline <script> of its own and no Alpine/x-data usage at
+        // all (grepped to confirm) — 'unsafe-eval'/'unsafe-inline' are only needed by
+        // Filament's own bundled admin UI (see SecurityHeaders::PANEL_CSP's own docblock),
+        // so the public policy must NOT carry either. Regression test for a real Exploita
+        // security-headers scan that graded this "misconfigured"/critical: the same relaxed
+        // policy used to be sent site-wide, defeating CSP's purpose on the pages that need
+        // it least.
+        $this->assertStringContainsString("script-src 'self';", $csp);
         $this->assertStringContainsString("object-src 'none'", $csp);
     }
 
@@ -43,7 +51,13 @@ class HeadersTest extends TestCase
 
         $response->assertOk();
         $response->assertHeader('X-Content-Type-Options', 'nosniff');
-        $this->assertNotNull($response->headers->get('Content-Security-Policy'));
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
+        // Unlike the public policy above, the admin panel's own bundled Alpine/Livewire UI
+        // genuinely needs both (see SecurityHeaders::PANEL_CSP's own docblock) — without
+        // them the login button spins forever and the password-reveal toggle breaks.
+        $this->assertStringContainsString("script-src 'self' 'unsafe-eval' 'unsafe-inline'", $csp);
     }
 
     public function test_the_csp_does_not_block_the_pages_own_self_hosted_assets(): void
