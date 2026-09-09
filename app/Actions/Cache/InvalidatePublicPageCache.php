@@ -52,4 +52,22 @@ class InvalidatePublicPageCache
         $this->__invoke('blog/' . $article->slug);
         $this->__invoke('blog');
     }
+
+    /**
+     * The home page reads a handful of Setting rows directly (home_hero_eyebrow/heading/
+     * subheading) — any Setting save busts it, rather than checking which key changed,
+     * since Settings are edited rarely enough that this isn't the "nuclear flush on every
+     * save" this class otherwise avoids.
+     *
+     * Not routed through __invoke(): Request::path() returns the literal string '/' for the
+     * root URL (the one path Laravel doesn't strip the leading slash from), so
+     * CachePublicPage::keyFor() keys it as 'public-page:{theme}:/' — ltrim()-ing that '/' the
+     * way every other route path needs would produce the wrong key (an empty path segment).
+     */
+    public function forHome(): void
+    {
+        foreach (['technical', 'matrix'] as $theme) {
+            Cache::forget("public-page:{$theme}:/");
+        }
+    }
 }
