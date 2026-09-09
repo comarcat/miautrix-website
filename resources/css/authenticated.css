@@ -1,0 +1,28 @@
+@import 'tailwindcss';
+@import '../../vendor/livewire/flux/dist/flux.css';
+
+@source '../views';
+
+/*
+ * Dedicated bundle for the RETAINED starter-kit pages only (the authenticated dashboard shell
+ * — resources/views/layouts/app/{sidebar,header}.blade.php — and the auth card/simple/split
+ * layouts: login, register, confirm-password, forgot/reset-password) — never the public
+ * design system (resources/css/app.css, resources/views/layouts/app.blade.php).
+ *
+ * Found in production review: these pages use Flux Blade components (<flux:sidebar>,
+ * <flux:main>, etc.) that render Flux's own custom elements (<ui-sidebar>, <ui-menu>, ...),
+ * which need Flux's own compiled CSS to lay out at all — without it, <ui-sidebar>'s
+ * `position: sticky` + `grid-area: sidebar` utility classes have no grid container to size
+ * against (nothing sets `display: grid` + `grid-template-areas` on <body>), so the sidebar
+ * renders full-width and overlaps the main content as the page scrolls. This is exactly the
+ * MFA-enrollment path (EnsureMfaConfirmed redirects an unconfirmed super_admin to
+ * /settings/security, itself one of these pages), so it isn't unused legacy scaffold — it's
+ * load-bearing for the very first real login.
+ *
+ * resources/css/app.css deliberately never imported Flux's CSS (blueprint §2/decision log,
+ * true since E1-T1) because Flux and this project's own design tokens both define
+ * --color-accent/--color-accent-content/--color-accent-foreground — importing both into ONE
+ * stylesheet would let whichever import runs last silently win that collision. Two separate
+ * bundles, each loaded only by the layout that actually needs it, avoids the collision
+ * entirely rather than trying to namespace around it.
+ */
