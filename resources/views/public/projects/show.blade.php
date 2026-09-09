@@ -1,7 +1,19 @@
 <x-layouts::app
-    :title="$project->title . ' — miautrix'"
-    :description="$project->summary"
+    :title="$project->seo_title ?: ($project->title . ' — miautrix')"
+    :description="$project->meta_description ?: $project->summary"
+    :image="\App\Support\Seo\OgImage::resolve($project->og_image_id)"
+    :canonical="$project->canonical_url ?: route('projects.show', $project->slug)"
 >
+    <x-slot:jsonLd>
+        <x-json-ld :data="[
+            '@context' => 'https://schema.org',
+            '@type' => 'CreativeWork',
+            'name' => $project->title,
+            'description' => $project->summary,
+            'url' => route('projects.show', $project->slug),
+            'dateCreated' => optional($project->started_at)->toDateString(),
+        ]" />
+    </x-slot:jsonLd>
     <div class="flex flex-col gap-8">
         <x-breadcrumb :items="[
             ['label' => 'Home', 'href' => route('home')],

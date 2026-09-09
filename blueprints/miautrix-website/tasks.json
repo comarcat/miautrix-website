@@ -711,7 +711,8 @@
       "resources/views/components/json-ld.blade.php",
       "public/robots.txt"
     ],
-    "status": "pending"
+    "status": "done",
+    "note": "2026-09-08: installed spatie/laravel-sitemap ^8.2 (composer.json's caret got stripped by a shell quoting quirk on first install — fixed by hand). Added app/Support/Seo/OgImage.php (og_image_id -> media.show URL, falling back to public/images/og-default.png — generated on-brand from the real Theme A tokens, no external asset). Wired canonical/OG-image/JSON-LD into Project show (CreativeWork), Article show (BlogPosting), and About (Person); layout emits site-wide Organization JSON-LD always. SeoAudit checks missing title/description/image-reference, duplicate canonical_url, and mismatched (malformed or route-inconsistent) canonical_url across all 5 publishable entity types generically. A11yTest sweeps all 9 published routes x 2 themes (18 renders, 276+ assertions) for html[lang], exactly one h1, img[alt], accessible link/button text, and labeled form inputs."
   },
   {
     "id": "E5-T2",

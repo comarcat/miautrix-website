@@ -2,6 +2,7 @@
     'title' => 'miautrix',
     'description' => 'Professional IT portfolio and blog.',
     'image' => null,
+    'canonical' => null,
 ])
 
 <!DOCTYPE html>
@@ -15,7 +16,19 @@
     <link rel="preload" href="{{ asset('fonts/ibm-plex-sans-400.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{{ asset('fonts/ibm-plex-sans-600.woff2') }}" as="font" type="font/woff2" crossorigin>
 
-    <x-meta :title="$title" :description="$description" :image="$image" />
+    <x-meta :title="$title" :description="$description" :image="$image" :canonical="$canonical" />
+
+    {{-- Organization JSON-LD is site-wide (every page is part of the same site); a page's own
+         Person/CreativeWork/BlogPosting schema layers on top via the $jsonLd slot. --}}
+    <x-json-ld :data="[
+        '@context' => 'https://schema.org',
+        '@type' => 'Organization',
+        'name' => 'miautrix',
+        'url' => route('home'),
+    ]" />
+    @isset($jsonLd)
+        {{ $jsonLd }}
+    @endisset
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>

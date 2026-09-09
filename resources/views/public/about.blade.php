@@ -1,7 +1,17 @@
 <x-layouts::app
     :title="'About — ' . $profile->full_name"
     :description="$profile->headline"
+    :canonical="route('about')"
 >
+    <x-slot:jsonLd>
+        <x-json-ld :data="[
+            '@context' => 'https://schema.org',
+            '@type' => 'Person',
+            'name' => $profile->full_name,
+            'jobTitle' => $profile->headline,
+            'url' => route('about'),
+        ]" />
+    </x-slot:jsonLd>
     <div class="flex flex-col gap-12">
         <section class="flex flex-col gap-4">
             <span class="font-mono text-mono uppercase tracking-wide text-muted-foreground">About</span>
