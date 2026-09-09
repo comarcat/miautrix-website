@@ -33,6 +33,25 @@ class PanelBootTest extends TestCase
         $response->assertRedirect(route('security.edit'));
     }
 
+    /**
+     * Regression test for a real production report: a confirmed super_admin, once inside
+     * the panel, had no way to reach their own account/2FA settings again — the panel had no
+     * ->profile() page and the default user menu carried no link back to it. These two items
+     * point at the starter-kit's own settings pages (never gated by EnsureMfaConfirmed), the
+     * same ones the MFA-required banner already links to.
+     */
+    public function test_a_confirmed_super_admin_sees_profile_and_security_links_in_the_user_menu(): void
+    {
+        $admin = User::factory()->withTwoFactor()->create();
+        $admin->assignRole(Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']));
+
+        $response = $this->actingAs($admin)->get('/admin');
+
+        $response->assertOk();
+        $response->assertSee(route('profile.edit'), false);
+        $response->assertSee(route('security.edit'), false);
+    }
+
     public function test_telescope_404s_outside_a_local_environment(): void
     {
         // APP_ENV=testing here (phpunit.xml), never local — TelescopeServiceProvider is only
