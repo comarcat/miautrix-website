@@ -772,6 +772,7 @@
       "app/Http/Middleware/SecurityHeaders.php",
       "tests/Feature/Security/HeadersTest.php"
     ],
-    "status": "pending"
+    "status": "in_progress",
+    "note": "2026-09-09: security-auditor pass completed (acceptance 2) — zero high-severity findings. 4 medium findings, all fixed: (1) HSTS fail-open when TLS terminates at a proxy (production sits behind Cloudflare, which proxies to nginx over plain HTTP — Request::secure() alone is always false there) -> SecurityHeaders also checks X-Forwarded-Proto. (2) queue-worker ran as `deploy` (owns releases/, holds sudo) rather than www-data -> changed to www-data in both infra/supervisor/queue-worker.conf and provision.sh's bootstrap placeholder; deploy.sh now syncs the repo's copy onto the server via a fixed-path sudo wrapper (miautrix-sync-queue-supervisor.sh) on every release, so the two configs can't drift apart. (3) backup.sh's dump file had no restrictive permissions -> umask 077 + explicit chmod 700/600. (4) backup.sh's MODE argument was interpolated unescaped into a remote SSH command -> whitelisted to exactly 'dump'/'--restore-to-scratch-and-verify' plus printf %q defense in depth. HeadersTest (5/5) and the deploy.sh guard already verified locally; supervisorctl status queue-worker already confirmed RUNNING directly on the LXC. Still pending before this can move to done: redeploy so the LXC has this release's infra/backup.sh, then run the real /up check and infra/backup.sh --restore-to-scratch-and-verify against production. postgresql-client added to provision.sh (the build machine deliberately has none) and installed on the LXC directly."
   }
 ]
