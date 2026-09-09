@@ -84,6 +84,23 @@ class PanelBootTest extends TestCase
         $this->assertTrue($panel->hasDarkModeForced());
     }
 
+    /**
+     * Regression test for a real production report: "there are only icons on the admin top
+     * menu no text, please return the text plus the icons" — a plain ->brandLogo(url)
+     * replaces Filament's default text-only brand entirely with just the image, no label
+     * alongside it. brandLogo() accepts Htmlable, not just a URL string, so it now renders
+     * both the logo image and a "miautrix" text label together.
+     */
+    public function test_the_brand_logo_includes_the_site_name_alongside_the_image(): void
+    {
+        $panel = Filament::getPanel('admin');
+        $brandLogo = (string) $panel->getBrandLogo();
+
+        $this->assertStringContainsString('miautrix', $brandLogo);
+        $this->assertStringContainsString('<img', $brandLogo);
+        $this->assertStringContainsString('images/brand/miautrix-logo.png', $brandLogo);
+    }
+
     public function test_telescope_404s_outside_a_local_environment(): void
     {
         // APP_ENV=testing here (phpunit.xml), never local — TelescopeServiceProvider is only

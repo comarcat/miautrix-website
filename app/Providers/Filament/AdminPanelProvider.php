@@ -21,6 +21,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -45,11 +46,19 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Zinc,
             ])
-            // Found in review: the real miautrix artwork, same file the public header and
-            // the retained starter-kit pages now use — served locally (img-src 'self'), same
-            // reasoning as BrandAvatarProvider below.
-            ->brandLogo(asset('images/brand/miautrix-logo.png'))
-            ->brandLogoHeight('2.5rem')
+            // Found in review: "there are only icons on the admin top menu no text, please
+            // return the text plus the icons" — a plain ->brandLogo(url) replaces Filament's
+            // default text-only brand entirely with just the image, no label alongside it.
+            // Passing HTML (brandLogo() accepts Htmlable, not just a URL string) keeps both,
+            // matching the public header's own logo+"miautrix" text lockup
+            // (resources/views/layouts/app.blade.php).
+            ->brandLogo(new HtmlString(
+                '<span style="display:inline-flex;align-items:center;gap:.5rem;font-weight:600">'
+                . '<img src="' . asset('images/brand/miautrix-logo.png') . '" alt="" style="height:2rem;width:2rem;object-fit:contain">'
+                . '<span>miautrix</span>'
+                . '</span>',
+            ))
+            ->brandLogoHeight('2rem')
             // Found in review: "use that image as ... profile picture for the admin" — the
             // real brand artwork, served locally (img-src 'self'), replacing the initials
             // badge this used to generate to avoid Filament's default UiAvatarsProvider (an

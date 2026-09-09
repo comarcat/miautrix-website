@@ -18,8 +18,18 @@
 
                     <x-card :title="$category->name">
                         <div class="flex flex-wrap gap-2">
+                            {{-- Found in review: "Windows Server -> Icon of Windows
+                                 Server, Sharepoint -> Icon of the logo of SharePoint" —
+                                 icons per skill, not per category. --}}
                             @foreach ($category->skills as $skill)
                                 <x-badge>
+                                    @if ($skill->icon)
+                                        <img
+                                            src="{{ route('media.show', [$skill->icon, $skill->icon->file_name]) }}"
+                                            alt=""
+                                            class="mr-1.5 -ml-0.5 size-4 rounded-full object-contain"
+                                        >
+                                    @endif
                                     {{ $skill->name }}
                                     <span class="text-muted-foreground">· {{ $skill->proficiency }}</span>
                                 </x-badge>
