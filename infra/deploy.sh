@@ -124,6 +124,20 @@ ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s -- "$DEPLOY_PATH" "$RELEASE_ID" <<'REMOTE
 set -euo pipefail
 DEPLOY_PATH="$1"; RELEASE_ID="$2"
 ln -sfn "$DEPLOY_PATH/releases/$RELEASE_ID" "$DEPLOY_PATH/current"
+
+# Found in production review: E5-T2's database page cache (CACHE_STORE=database) has a
+# 1-hour TTL and is never invalidated by a deploy — but every `npm run build` above produces
+# NEW content-hashed asset filenames (app-*.css/js), and the OLD release's public/ directory
+# stops being reachable the instant this symlink flips (nginx serves through `current` only;
+# old releases are pruned by count in step 8/8, but even before that they're off the served
+# path). Any 'public-page:*' cache entry written before this cutover still holds a full HTML
+# response referencing the now-dead old asset URLs, so a route+theme combination that isn't
+# re-requested until it's served from that stale cache renders completely unstyled — reported
+# as "switching back to a theme breaks the page, no theme at all" (that theme's cache entry
+# happened to be the stale one; the other theme had already been re-cached against the new
+# build). Flushing right after cutover means the very next request to any page recomputes and
+# caches fresh HTML against the assets that are actually live.
+php "$DEPLOY_PATH/current/artisan" cache:clear
 REMOTE_CUTOVER
 
 echo "==> 7/8 sync supervisor config, restart queue worker, reload php-fpm/nginx"

@@ -10,6 +10,14 @@
 
     When the current theme is matrix, the "overrides system theme" label makes the
     override visible rather than silently ignoring prefers-color-scheme (acceptance 4).
+
+    "Console" is this theme's DISPLAY name only — found in review, the old "Technical"
+    label read as a generic settings toggle rather than the terminal-styled theme it
+    actually is (see app.css's Courier New override). The cookie value, data-theme
+    attribute, and every internal identifier stay 'technical' (ResolveTheme,
+    CachePublicPage's cache key, ThemeController's validation) — renaming those would
+    touch cache keys and stored cookies for zero user-visible benefit; only the label
+    users actually read has changed.
 --}}
 <div class="flex items-center gap-3 text-sm">
     @if ($theme === 'matrix')
@@ -20,7 +28,7 @@
             @csrf
             <input type="hidden" name="theme" value="technical">
             <button type="submit" class="hover:text-accent-text">
-                Switch to Technical
+                Switch to Console
             </button>
         </form>
     @else
