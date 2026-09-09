@@ -14,15 +14,23 @@ use Illuminate\Support\Facades\Route;
 
 // The real design system's home page (E4-T4, §9 step 22) — replaces the step-5 hello-world
 // placeholder that lived here (public.hello) from before any feature work existed.
-Route::get('/', [HomeController::class, 'index'])->name('home');
-Route::get('/about', [AboutController::class, 'index'])->name('about');
-Route::get('/experience', [ExperienceController::class, 'index'])->name('experience');
-Route::get('/skills', [SkillsController::class, 'index'])->name('skills');
-Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
-Route::get('/projects/{slug}', [ProjectController::class, 'show'])->name('projects.show');
-Route::view('/contact', 'public.contact')->name('contact');
-Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
-Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
+//
+// 'cache.public' (E5-T2, §9 step 26) wraps every content page below EXCEPT the two that must
+// always reflect the current instant (feed.xml/sitemap.xml are already cheap, and a stale
+// sitemap could hide a newly-published page from crawlers longer than necessary) and /contact
+// (its own content never changes; the Livewire form underneath still hydrates and posts to a
+// separate, never-cached endpoint regardless of whether this shell was served from cache).
+Route::middleware('cache.public')->group(function (): void {
+    Route::get('/', [HomeController::class, 'index'])->name('home');
+    Route::get('/about', [AboutController::class, 'index'])->name('about');
+    Route::get('/experience', [ExperienceController::class, 'index'])->name('experience');
+    Route::get('/skills', [SkillsController::class, 'index'])->name('skills');
+    Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
+    Route::get('/projects/{slug}', [ProjectController::class, 'show'])->name('projects.show');
+    Route::view('/contact', 'public.contact')->name('contact');
+    Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
+    Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
+});
 Route::get('/feed.xml', [BlogController::class, 'feed'])->name('feed');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
