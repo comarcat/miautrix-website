@@ -203,6 +203,15 @@ class MediaUploadField
      * Decodes a JPEG/PNG/WebP into a GD resource. Returns null for non-image types (PDF/DOCX/
      * ZIP pass through unmodified — GD can't and shouldn't touch those) or a corrupt image.
      *
+     * BUG FIXED (found running app:fetch-company-education-logos in production): a
+     * palette/indexed-color PNG (common for small icons and favicons — confirmed via `file`
+     * on the fetched logos: "8-bit colormap") decodes fine, but imagewebp() refuses to encode
+     * a palette image at all ("Palette image not supported by webp"), so storeWebpSibling()
+     * crashed on every one of them. This wasn't fetchAndStore()-specific: the exact same
+     * crash would hit a real admin's own drag-and-drop upload of any indexed PNG. Converting
+     * to truecolor here (imagepalettetotruecolor(), a no-op for an already-truecolor image)
+     * fixes it once for every caller, not just this one.
+     *
      * @return \GdImage|null
      */
     private static function loadImageIfSupported(string $path, string $mime)
@@ -214,7 +223,15 @@ class MediaUploadField
             default => false,
         };
 
-        return $image ?: null;
+        if ($image === false) {
+            return null;
+        }
+
+        if (! imageistruecolor($image)) {
+            imagepalettetotruecolor($image);
+        }
+
+        return $image;
     }
 
     /**
