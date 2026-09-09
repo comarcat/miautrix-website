@@ -21,6 +21,9 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
  * - Images (JPEG/PNG/WebP) are re-encoded through GD before being written to disk, which
  *   discards anything that isn't real pixel data (an embedded script in a polyglot file, for
  *   instance) regardless of what the original bytes contained.
+ * - A JPEG/PNG upload additionally gets a WebP sibling written alongside the original —
+ *   same UUID basename, `.webp` extension (E5-T2, §9 step 26). A WebP original skips this
+ *   (nothing to derive that isn't already itself).
  *
  * Returns a normal storage path from saveUploadedFileUsing (not a Media row/id) — Filament's
  * own upload-preview and removal machinery expects that. Turning an uploaded file into a
@@ -77,10 +80,13 @@ class MediaUploadField
 
         $storedName = self::uuidNameFor($file);
         $path = self::DIRECTORY . '/' . $storedName;
-        $reencoded = self::reencodeIfImage($file->getRealPath(), $file->getMimeType());
+        $mime = $file->getMimeType();
+        $image = self::loadImageIfSupported($file->getRealPath(), $mime);
 
-        if ($reencoded !== null) {
-            Storage::disk(self::DISK)->put($path, $reencoded);
+        if ($image !== null) {
+            Storage::disk(self::DISK)->put($path, self::encode($image, $mime));
+            self::storeWebpSibling($image, $mime, $path);
+            imagedestroy($image);
         } else {
             $file->storeAs(self::DIRECTORY, $storedName, self::DISK);
         }
@@ -94,34 +100,69 @@ class MediaUploadField
     }
 
     /**
-     * Re-encodes JPEG/PNG/WebP through GD, stripping anything that isn't real pixel data.
-     * Returns null for non-image types (PDF/DOCX/ZIP pass through unmodified — GD can't and
-     * shouldn't touch those).
+     * Decodes a JPEG/PNG/WebP into a GD resource. Returns null for non-image types (PDF/DOCX/
+     * ZIP pass through unmodified — GD can't and shouldn't touch those) or a corrupt image.
+     *
+     * @return \GdImage|null
      */
-    private static function reencodeIfImage(string $path, string $mime): ?string
+    private static function loadImageIfSupported(string $path, string $mime)
     {
         $image = match ($mime) {
             'image/jpeg' => @imagecreatefromjpeg($path),
             'image/png' => @imagecreatefrompng($path),
             'image/webp' => @imagecreatefromwebp($path),
-            default => null,
+            default => false,
         };
 
-        if (! $image) {
-            return null;
-        }
+        return $image ?: null;
+    }
 
+    /**
+     * Re-encodes a decoded image back to its own original format — this is what strips
+     * anything that isn't real pixel data (an embedded script in a polyglot file, for
+     * instance) regardless of what the original bytes contained.
+     *
+     * @param  \GdImage  $image
+     */
+    private static function encode($image, string $mime): string
+    {
         ob_start();
 
         match ($mime) {
             'image/jpeg' => imagejpeg($image, quality: 90),
             'image/png' => imagepng($image),
             'image/webp' => imagewebp($image, quality: 90),
+            // $image only ever came from loadImageIfSupported(), which already restricts
+            // $mime to these three — unreachable in practice, but match() must be exhaustive.
+            default => throw new \InvalidArgumentException("Unsupported image mime: {$mime}"),
         };
 
-        $bytes = ob_get_clean();
-        imagedestroy($image);
+        return ob_get_clean() ?: '';
+    }
 
-        return $bytes === false ? null : $bytes;
+    /**
+     * Writes a `.webp` sibling alongside the original (same UUID basename) for a JPEG/PNG
+     * upload (E5-T2, §9 step 26). A WebP original is skipped — there is nothing to derive
+     * that isn't already itself, and re-writing it under a second name would just duplicate
+     * the file for no reason.
+     *
+     * @param  \GdImage  $image
+     */
+    private static function storeWebpSibling($image, string $mime, string $originalPath): void
+    {
+        if ($mime === 'image/webp') {
+            return;
+        }
+
+        ob_start();
+        imagewebp($image, quality: 90);
+        $webpBytes = ob_get_clean();
+
+        if ($webpBytes === false || $webpBytes === '') {
+            return;
+        }
+
+        $webpPath = preg_replace('/\.[^.]+$/', '.webp', $originalPath);
+        Storage::disk(self::DISK)->put($webpPath, $webpBytes);
     }
 }

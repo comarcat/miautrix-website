@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Contracts\AnalyticsProviderInterface;
+use App\Models\Project;
+use App\Observers\ProjectObserver;
 use App\Support\Analytics\NullAnalyticsProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -57,6 +59,10 @@ class AppServiceProvider extends ServiceProvider
         // the view itself. Registered before 'blade.php' so the more specific extension
         // wins the finder's file_exists() probe for a name that also happens to end .xml.
         View::addExtension('xml.blade.php', 'blade');
+
+        // Invalidates a Project's cached detail page the instant `published` changes,
+        // regardless of what triggered the save (E5-T2, §9 step 26).
+        Project::observe(ProjectObserver::class);
     }
 
     /**

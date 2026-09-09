@@ -85,6 +85,28 @@ class UploadValidationTest extends TestCase
         $this->assertSame('image/jpeg', $info['mime']);
     }
 
+    public function test_a_jpeg_upload_also_gets_a_webp_sibling_alongside_the_original(): void
+    {
+        $upload = Livewire::test(UploadValidationTestComponent::class)
+            ->set('file', UploadedFile::fake()->image('photo.jpg', 200, 200));
+
+        /** @var UploadValidationTestComponent $component */
+        $component = $upload->instance();
+        $path = MediaUploadField::store($component->file);
+
+        $webpPath = preg_replace('/\.[^.]+$/', '.webp', $path);
+        Storage::disk(MediaUploadField::DISK)->assertExists($webpPath);
+
+        $storedBytes = Storage::disk(MediaUploadField::DISK)->get($webpPath);
+        $tmpCheck = tempnam(sys_get_temp_dir(), 'webp-check');
+        file_put_contents($tmpCheck, $storedBytes);
+        $info = @getimagesize($tmpCheck);
+        @unlink($tmpCheck);
+
+        $this->assertNotFalse($info);
+        $this->assertSame('image/webp', $info['mime']);
+    }
+
     public function test_media_belonging_to_an_unpublished_entity_404s(): void
     {
         Storage::disk(MediaUploadField::DISK)->put(MediaUploadField::DIRECTORY . '/secret.jpg', 'fake-bytes');
