@@ -739,7 +739,8 @@
       "app/Actions/Cache/InvalidatePublicPageCache.php",
       "tests/Feature/Cache/PageCacheTest.php"
     ],
-    "status": "in_progress"
+    "status": "done",
+    "note": "2026-09-08/09: code merged in PR #33 (step-26-cache-performance tag applies to this commit). Lighthouse CI run against the live production domain (https://miautrix.tech) per this task's own verify command: Home — Performance 0.99, SEO 1.00; a real project page (/projects/omnis-perspiciatis-ex) — Performance 1.00, SEO 1.00; a real article page (/blog/perferendis-tempore-possimus-dignissimos-sit-vel-impedit) — Performance 0.99, SEO 1.00. All three clear the >=0.95 bar on both categories. FINDING (fixed separately, PR 'fix: move fakerphp/faker to production dependencies'): infra/deploy.sh's `composer install --no-dev` meant DatabaseSeeder + every model factory (which call the fake() helper) could not run in production at all — fakerphp/faker was require-dev only. Moved to require; this is a real production-time dependency of the seeding pipeline the blueprint's own bootstrap process depends on, not merely a testing tool. Production was then seeded (admin user + full sample content) with the user's explicit approval after an initial partial-seed-then-truncate cycle (the first attempt failed on the missing Faker dependency before that fix landed, leaving partial rows that had to be truncated and re-seeded once fixed)."
   },
   {
     "id": "E5-T3",
