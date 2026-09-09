@@ -6,6 +6,8 @@ use App\Models\Article;
 use App\Models\Profile;
 use App\Models\Project;
 use App\Models\ProjectCategory;
+use App\Models\Skill;
+use App\Models\SkillCategory;
 use App\Models\SocialProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -177,5 +179,45 @@ class PageCacheTest extends TestCase
         }
 
         $this->get(route('connect'))->assertSee('LinkedIn');
+    }
+
+    /**
+     * Regression test for a real production report: "changes that I am doing on the admin
+     * part for [skills] are not being show[n] like a new Ubiquiti Skill under Networking
+     * Category" — neither Skill nor SkillCategory had an observer at all, so /skills stayed
+     * stuck on whatever was cached before the edit, same gap Article/Setting/SocialProfile
+     * had before their own observers.
+     */
+    public function test_saving_a_skill_or_its_category_invalidates_the_skills_page_cache_entry(): void
+    {
+        $profile = Profile::create([
+            'user_id' => User::factory()->create()->id,
+            'full_name' => 'Ada Lovelace',
+            'headline' => 'Software Engineer',
+            'bio' => 'Building reliable systems.',
+        ]);
+        $category = SkillCategory::create(['name' => 'Networking', 'sort_order' => 0]);
+
+        $this->get(route('skills'))->assertOk();
+        $this->assertTrue(Cache::has('public-page:technical:skills'));
+
+        Skill::create([
+            'profile_id' => $profile->id,
+            'skill_category_id' => $category->id,
+            'name' => 'Ubiquiti',
+            'proficiency' => 'advanced',
+            'sort_order' => 0,
+        ]);
+
+        $this->assertFalse(Cache::has('public-page:technical:skills'));
+        $this->get(route('skills'))->assertSee('Ubiquiti');
+
+        $this->get(route('skills'))->assertOk();
+        $this->assertTrue(Cache::has('public-page:technical:skills'));
+
+        $category->update(['name' => 'Networking & Security']);
+
+        $this->assertFalse(Cache::has('public-page:technical:skills'));
+        $this->get(route('skills'))->assertSee('Networking & Security');
     }
 }
