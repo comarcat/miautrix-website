@@ -17,10 +17,23 @@ use Symfony\Component\HttpFoundation\Response;
  * covers script/style/font/img/connect without needing any external host allowlisted. No
  * inline <script> exists anywhere in the app's own views (grepped to confirm) other than
  * `<script type="application/ld+json">`, which CSP's script-src does not gate at all (it is
- * a data block, never executed) — so script-src stays 'self' with no 'unsafe-inline'. A
+ * a data block, never executed) — so script-src needs no 'unsafe-inline'. A
  * `style="..."` attribute does still exist on one starter-kit page, hence
  * 'unsafe-inline' on style-src only (inline style injection is a materially lower-severity
  * risk than inline script, and there is no first-party CSP nonce plumbing to avoid it here).
+ *
+ * 'unsafe-eval' on script-src is a real, deliberate trade-off (found missing in production
+ * review): Alpine.js — bundled inside Livewire and used throughout Filament's own admin UI
+ * (every `x-data`/`x-bind`/`x-on` expression, including ones Filament generates at runtime
+ * like `filamentSchema(...)`) — evaluates its directive expressions via the `Function`
+ * constructor by default. Without 'unsafe-eval', every one of those throws an EvalError and
+ * is silently swallowed: the admin login button spins forever (Livewire's own processing
+ * state can't be read), and Filament's password-reveal toggle can't bind `type="password"`
+ * at all, showing the raw value in plain text. Alpine ships a CSP-safe build that avoids this,
+ * but Filament's own internals were not written against that restricted evaluator (they
+ * call named JS functions dynamically, which the CSP-safe build does not support) — adopting
+ * it would require reworking Filament's own bundled assets, not just this app's code. Kept
+ * scoped to script-src only (not a blanket 'unsafe-inline' on it too, which stays absent).
  * HSTS is only sent over an actual HTTPS connection — sending it over plain HTTP achieves
  * nothing (browsers ignore it per spec) and would just be noise in local dev. Production sits
  * behind Cloudflare terminating TLS and proxying to nginx over plain HTTP, so
@@ -31,7 +44,7 @@ use Symfony\Component\HttpFoundation\Response;
 class SecurityHeaders
 {
     private const CSP = "default-src 'self'; "
-        . "script-src 'self'; "
+        . "script-src 'self' 'unsafe-eval'; "
         . "style-src 'self' 'unsafe-inline'; "
         . "font-src 'self'; "
         . "img-src 'self' data:; "

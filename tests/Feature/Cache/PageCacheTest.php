@@ -46,11 +46,11 @@ class PageCacheTest extends TestCase
         $project = Project::factory()->create(['title' => 'Toggle Project', 'slug' => 'toggle-project']);
 
         $this->get(route('projects.show', $project->slug))->assertOk();
-        $this->assertTrue(Cache::has('public-page:projects/toggle-project'));
+        $this->assertTrue(Cache::has('public-page:technical:projects/toggle-project'));
 
         $project->update(['published' => false]);
 
-        $this->assertFalse(Cache::has('public-page:projects/toggle-project'));
+        $this->assertFalse(Cache::has('public-page:technical:projects/toggle-project'));
         $this->get(route('projects.show', $project->slug))->assertNotFound();
     }
 
@@ -62,7 +62,7 @@ class PageCacheTest extends TestCase
         $this->get(route('projects.index'))->assertOk();
         $this->get(route('projects.index', ['category' => 'web']))->assertOk();
 
-        $this->assertTrue(Cache::has('public-page:projects'));
-        $this->assertTrue(Cache::has('public-page:projects?category=web'));
+        $this->assertTrue(Cache::has('public-page:technical:projects'));
+        $this->assertTrue(Cache::has('public-page:technical:projects?category=web'));
     }
 }

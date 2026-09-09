@@ -2,6 +2,7 @@
 
 namespace App\Actions\Cache;
 
+use App\Http\Middleware\ResolveTheme;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -20,6 +21,13 @@ use Symfony\Component\HttpFoundation\Response;
  * cached request) — that's what acceptance criterion 1 actually needs verified: the second
  * response must still reflect what was true when it was cached, even if the underlying row
  * has since changed, which a response-time assertion alone couldn't prove.
+ *
+ * BUG FIXED (found in production review): the cache key originally did not vary by the
+ * `miautrix_theme` cookie, so once any page was cached under one theme, every visitor of
+ * every theme got served that same frozen HTML — the theme switcher's redirect appeared to
+ * do nothing, because the redirected-to GET was answered entirely from cache before
+ * ResolveTheme's cookie read (and the new data-theme attribute) ever had a chance to render.
+ * The key now includes the resolved theme, so each theme gets its own cache entry per route.
  */
 class CachePublicPage
 {
@@ -48,14 +56,16 @@ class CachePublicPage
     }
 
     /**
-     * 'public-page:' + the path (no leading slash — Request::path() already strips it) and,
-     * when present, the query string — this is the "route + query string" key the acceptance
-     * criteria and InvalidatePublicPageCache both need to agree on.
+     * 'public-page:' + theme + the path (no leading slash — Request::path() already strips
+     * it) and, when present, the query string. The theme segment matches
+     * InvalidatePublicPageCache::forProject(), which must forget both themes' entries for a
+     * project — it does not know which theme any given cached visitor was on.
      */
     public static function keyFor(Request $request): string
     {
         $query = $request->getQueryString();
+        $theme = $request->cookie(ResolveTheme::COOKIE_NAME) === 'matrix' ? 'matrix' : 'technical';
 
-        return 'public-page:' . $request->path() . ($query ? '?' . $query : '');
+        return 'public-page:' . $theme . ':' . $request->path() . ($query ? '?' . $query : '');
     }
 }
