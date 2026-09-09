@@ -2,7 +2,7 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Support\InitialsAvatarProvider;
+use App\Filament\Support\BrandAvatarProvider;
 use App\Http\Middleware\EnsureMfaConfirmed;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
@@ -45,13 +45,16 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Zinc,
             ])
-            // Found in review: Filament's own default avatar provider (UiAvatarsProvider)
-            // calls out to https://ui-avatars.com — a request `img-src 'self' data:` already
-            // blocks, and there's no picture-upload feature anywhere in this app for a real
-            // photo to replace it with. The starter kit's own pages never made that external
-            // call either (Flux's <flux:avatar :initials="...">, rendered locally) — this
-            // panel now matches that with the same local, initials-only badge.
-            ->defaultAvatarProvider(InitialsAvatarProvider::class)
+            // Found in review: the real miautrix artwork, same file the public header and
+            // the retained starter-kit pages now use — served locally (img-src 'self'), same
+            // reasoning as BrandAvatarProvider below.
+            ->brandLogo(asset('images/brand/miautrix-logo.png'))
+            ->brandLogoHeight('2.5rem')
+            // Found in review: "use that image as ... profile picture for the admin" — the
+            // real brand artwork, served locally (img-src 'self'), replacing the initials
+            // badge this used to generate to avoid Filament's default UiAvatarsProvider (an
+            // external request to ui-avatars.com that img-src 'self' data: already blocks).
+            ->defaultAvatarProvider(BrandAvatarProvider::class)
             // Found in review: Filament's own default keeps you on the record's edit page
             // after a successful save (and lands a new record straight on ITS edit page too)
             // rather than returning to the list — reported as confusing ("after saving,

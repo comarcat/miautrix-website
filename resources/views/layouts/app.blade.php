@@ -39,8 +39,9 @@
 
     <header class="border-b border-border">
         <div class="mx-auto flex max-w-(--container-content) items-center justify-between px-4 py-4">
-            <a href="{{ route('home') }}" class="font-mono text-sm font-medium tracking-wide text-foreground">
-                miautrix
+            <a href="{{ route('home') }}" class="flex items-center gap-2 font-mono text-sm font-medium tracking-wide text-foreground">
+                <img src="{{ asset('images/brand/miautrix-logo.png') }}" alt="" class="h-8 w-8 object-contain">
+                <span>miautrix</span>
             </a>
 
             <nav aria-label="Primary" class="flex items-center gap-6 text-sm">

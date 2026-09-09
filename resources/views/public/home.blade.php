@@ -17,6 +17,30 @@
             </p>
         </section>
 
+        {{-- Found in review: swapped with Projects below — blog posts are ready to show now,
+             projects still need work, so blog goes first on the homepage. --}}
+        <section class="flex flex-col gap-6">
+            <h2 class="text-heading-2 text-foreground">Latest from the blog</h2>
+
+            @if ($latestArticles->isEmpty())
+                <x-alert variant="info">No articles published yet.</x-alert>
+            @else
+                <div class="grid gap-6 md:grid-cols-3">
+                    @foreach ($latestArticles as $article)
+                        <x-card :title="$article->title">
+                            <p>{{ $article->excerpt }}</p>
+
+                            <x-slot:footer>
+                                <x-button :href="route('blog.show', $article->slug)" variant="outline" size="sm">
+                                    Read more
+                                </x-button>
+                            </x-slot:footer>
+                        </x-card>
+                    @endforeach
+                </div>
+            @endif
+        </section>
+
         <section class="flex flex-col gap-6">
             <h2 class="text-heading-2 text-foreground">Featured projects</h2>
 
@@ -34,28 +58,6 @@
                             <x-slot:footer>
                                 <x-button :href="route('projects.show', $project->slug)" variant="outline" size="sm">
                                     View project
-                                </x-button>
-                            </x-slot:footer>
-                        </x-card>
-                    @endforeach
-                </div>
-            @endif
-        </section>
-
-        <section class="flex flex-col gap-6">
-            <h2 class="text-heading-2 text-foreground">Latest from the blog</h2>
-
-            @if ($latestArticles->isEmpty())
-                <x-alert variant="info">No articles published yet.</x-alert>
-            @else
-                <div class="grid gap-6 md:grid-cols-3">
-                    @foreach ($latestArticles as $article)
-                        <x-card :title="$article->title">
-                            <p>{{ $article->excerpt }}</p>
-
-                            <x-slot:footer>
-                                <x-button :href="route('blog.show', $article->slug)" variant="outline" size="sm">
-                                    Read more
                                 </x-button>
                             </x-slot:footer>
                         </x-card>

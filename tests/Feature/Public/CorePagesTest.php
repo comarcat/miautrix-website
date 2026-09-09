@@ -53,6 +53,10 @@ class CorePagesTest extends TestCase
         $response->assertSeeInOrder(['Newest Article', 'Middle Article', 'Oldest Shown Article']);
         $response->assertDontSee('Too Old To Show');
         $response->assertDontSee('Draft Article');
+
+        // Found in review: swapped so the blog (ready to show) comes before Projects
+        // (still being worked on) on the homepage.
+        $response->assertSeeInOrder(['Latest from the blog', 'Featured projects']);
     }
 
     public function test_about_page_returns_200_and_renders_the_profile_bio_and_published_experience_education_summaries(): void
