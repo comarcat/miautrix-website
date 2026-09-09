@@ -26,7 +26,10 @@
                 <x-badge variant="accent">{{ $project->projectCategory->name }}</x-badge>
             @endif
             <h1 class="text-display text-foreground">{{ $project->title }}</h1>
-            <p class="max-w-(--breakpoint-xs) text-body text-muted-foreground">{{ $project->summary }}</p>
+            {{-- --breakpoint-xs is a 375px MEDIA-QUERY breakpoint token (app.css), not a
+                 content-width design token — using it here pinned this to phone width even
+                 on desktop (found in review, same bug across every other page's body copy). --}}
+            <p class="text-body text-muted-foreground">{{ $project->summary }}</p>
 
             <div class="flex flex-wrap gap-3">
                 @if ($project->repo_url)

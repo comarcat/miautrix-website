@@ -30,8 +30,14 @@
             {{-- The RichEditor body is already-sanitized HTML produced by Filament's own
                  Tiptap editor (E3-T6) — no raw user input ever reaches this page.
                  [&>*+*]:mt-4 spaces block elements without needing the (uninstalled)
-                 @tailwindcss/typography plugin. --}}
-            <div class="max-w-(--breakpoint-xs) text-body text-foreground [&>*+*]:mt-4">
+                 @tailwindcss/typography plugin.
+
+                 Found in review: this used max-w-(--breakpoint-xs) — a 375px MEDIA-QUERY
+                 breakpoint token (app.css), not a content-width design token — which pinned
+                 every article's body to phone width even on desktop (reported: "the space
+                 for the content is like the space on a phone"). Removed; content now fills
+                 the same --container-content width the header/nav already use. --}}
+            <div class="text-body text-foreground [&>*+*]:mt-4">
                 {!! $article->body !!}
             </div>
         </article>

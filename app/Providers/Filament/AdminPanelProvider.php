@@ -32,8 +32,18 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            // Found in review: "I like the /dashboard UI, make the admin match it" — that
+            // starter-kit layout (resources/views/layouts/app/sidebar.blade.php) hardcodes
+            // <html class="dark"> with no toggle at all, and leans on Flux's neutral zinc
+            // palette rather than a bright accent. Forcing dark mode (no switcher) and
+            // swapping the accent from Amber to Zinc gets the panel's overall feel — dark,
+            // neutral, understated — much closer to that without a full custom Filament
+            // theme rebuild (a separate, much larger undertaking: Filament's own compiled
+            // CSS, fonts, and spacing are a different Tailwind build entirely from
+            // resources/css/authenticated.css).
+            ->darkMode(isForced: true)
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Zinc,
             ])
             // Found in review: Filament's own default avatar provider (UiAvatarsProvider)
             // calls out to https://ui-avatars.com — a request `img-src 'self' data:` already
