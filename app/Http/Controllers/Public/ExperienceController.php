@@ -16,7 +16,7 @@ class ExperienceController extends Controller
         $experiences = Experience::query()
             ->where('published', true)
             ->orderByDesc('started_at')
-            ->with('company')
+            ->with('company.logo')
             ->get();
 
         return view('public.experience', [

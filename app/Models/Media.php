@@ -43,6 +43,7 @@ class Media extends SpatieMedia
         ['table' => 'companies', 'column' => 'logo_media_id', 'publishedColumn' => null],
         ['table' => 'experiences', 'column' => 'og_image_id', 'publishedColumn' => 'published'],
         ['table' => 'education', 'column' => 'og_image_id', 'publishedColumn' => 'published'],
+        ['table' => 'education', 'column' => 'logo_media_id', 'publishedColumn' => 'published'],
         ['table' => 'certifications', 'column' => 'media_id', 'publishedColumn' => 'published'],
         ['table' => 'certifications', 'column' => 'og_image_id', 'publishedColumn' => 'published'],
         ['table' => 'projects', 'column' => 'og_image_id', 'publishedColumn' => 'published'],

@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property string $institution
  * @property string $degree
  * @property string $field_of_study
+ * @property int|null $logo_media_id
  * @property Carbon $started_at
  * @property Carbon|null $ended_at
  * @property string $slug
@@ -40,6 +41,7 @@ class Education extends Model
         'institution',
         'degree',
         'field_of_study',
+        'logo_media_id',
         'started_at',
         'ended_at',
         'slug',
@@ -67,6 +69,14 @@ class Education extends Model
     public function profile(): BelongsTo
     {
         return $this->belongsTo(Profile::class);
+    }
+
+    /**
+     * @return BelongsTo<Media, $this>
+     */
+    public function logo(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'logo_media_id');
     }
 
     protected function slugSource(): string

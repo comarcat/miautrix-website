@@ -43,6 +43,9 @@
                     'title' => $experience->title,
                     'subtitle' => $experience->company->name ?? null,
                     'period' => $experience->started_at->format('Y') . '—' . ($experience->ended_at?->format('Y') ?? 'Present'),
+                    'logo' => $experience->company?->logo
+                        ? route('media.show', [$experience->company->logo, $experience->company->logo->file_name])
+                        : null,
                 ])->all()" />
             @endif
         </section>
@@ -57,6 +60,9 @@
                     'title' => $item->degree . ', ' . $item->field_of_study,
                     'subtitle' => $item->institution,
                     'period' => $item->started_at->format('Y') . '—' . ($item->ended_at?->format('Y') ?? 'Present'),
+                    'logo' => $item->logo
+                        ? route('media.show', [$item->logo, $item->logo->file_name])
+                        : null,
                 ])->all()" />
             @endif
         </section>

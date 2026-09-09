@@ -26,8 +26,8 @@ class AboutController extends Controller
 
         return view('public.about', [
             'profile' => $profile,
-            'experiences' => $profile->experiences()->where('published', true)->with('company')->get(),
-            'education' => $profile->education()->where('published', true)->get(),
+            'experiences' => $profile->experiences()->where('published', true)->with('company.logo')->get(),
+            'education' => $profile->education()->where('published', true)->with('logo')->get(),
         ]);
     }
 }

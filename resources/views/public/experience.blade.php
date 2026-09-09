@@ -18,6 +18,9 @@
                     'subtitle' => $experience->company->name ?? null,
                     'period' => $experience->started_at->format('Y') . '—' . ($experience->ended_at?->format('Y') ?? 'Present'),
                     'description' => $experience->description,
+                    'logo' => $experience->company?->logo
+                        ? route('media.show', [$experience->company->logo, $experience->company->logo->file_name])
+                        : null,
                 ])->all()" />
             @endif
         </section>
