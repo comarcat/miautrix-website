@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Contracts\AnalyticsProviderInterface;
+use App\Models\Article;
 use App\Models\Project;
+use App\Observers\ArticleObserver;
 use App\Observers\ProjectObserver;
 use App\Support\Analytics\NullAnalyticsProvider;
 use Carbon\CarbonImmutable;
@@ -60,9 +62,13 @@ class AppServiceProvider extends ServiceProvider
         // wins the finder's file_exists() probe for a name that also happens to end .xml.
         View::addExtension('xml.blade.php', 'blade');
 
-        // Invalidates a Project's cached detail page the instant `published` changes,
-        // regardless of what triggered the save (E5-T2, §9 step 26).
+        // Invalidates a Project's cached detail AND index page the instant `published`
+        // changes, regardless of what triggered the save (E5-T2, §9 step 26).
         Project::observe(ProjectObserver::class);
+
+        // Same for Article — found missing entirely in production review (see
+        // ArticleObserver's own docblock).
+        Article::observe(ArticleObserver::class);
     }
 
     /**
