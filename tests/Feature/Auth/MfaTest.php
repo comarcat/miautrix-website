@@ -37,6 +37,42 @@ class MfaTest extends TestCase
     }
 
     /**
+     * Regression test for a real production bug found in review: an admin redirected here
+     * by EnsureMfaConfirmed saw only account/password/2FA settings, with nothing explaining
+     * why, and reported the admin panel's content management as entirely missing. The
+     * redirect is correct — MFA is mandatory — but it needs to say so.
+     */
+    public function test_the_mfa_redirect_shows_a_banner_explaining_why_the_admin_panel_is_unreachable(): void
+    {
+        $user = User::factory()->create(); // two_factor_confirmed_at null by default
+        $this->assignSuperAdmin($user);
+
+        $response = $this->actingAs($user)->get('/admin');
+        $response->assertRedirect(route('security.edit'));
+
+        $followed = $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->followingRedirects()
+            ->get('/admin');
+
+        $followed->assertOk();
+        $followed->assertSee('Two-factor authentication required');
+    }
+
+    public function test_visiting_security_settings_directly_shows_no_mfa_required_banner(): void
+    {
+        $user = User::factory()->create();
+        $this->assignSuperAdmin($user);
+
+        $response = $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('security.edit'));
+
+        $response->assertOk();
+        $response->assertDontSee('Two-factor authentication required');
+    }
+
+    /**
      * /admin is Filament's real panel as of E3-T1 — Filament's own Authenticate middleware
      * 403s any user that doesn't implement canAccessPanel() truthfully (User::canAccessPanel
      * checks hasRole('super_admin')), independently of and before EnsureMfaConfirmed ever
