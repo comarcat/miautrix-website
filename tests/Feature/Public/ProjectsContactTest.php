@@ -89,6 +89,26 @@ class ProjectsContactTest extends TestCase
             && $viewProject->technologies->count() === 1);
     }
 
+    /**
+     * Regression test for a real production request: "please change the detail of the
+     * project from textbox to enhanced so I can put text with styles" — description is a
+     * RichEditor field now (same already-sanitized-HTML pattern as Article::body) and must
+     * render as HTML, not escaped plain text.
+     */
+    public function test_project_show_renders_the_description_as_rich_html(): void
+    {
+        $project = Project::factory()->create([
+            'title' => 'Styled Project',
+            'slug' => 'styled-project',
+            'description' => '<p>Built with <strong>Laravel</strong> and <em>Livewire</em>.</p>',
+        ]);
+
+        $response = $this->get(route('projects.show', $project->slug));
+
+        $response->assertOk();
+        $response->assertSee('Built with <strong>Laravel</strong> and <em>Livewire</em>.', false);
+    }
+
     public function test_project_show_returns_404_for_an_unpublished_project(): void
     {
         $project = Project::factory()->create(['published' => false, 'slug' => 'unpublished-project']);

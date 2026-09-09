@@ -61,7 +61,12 @@
 
         <section class="flex flex-col gap-4">
             <h2 class="text-heading-2 text-foreground">About this project</h2>
-            <p class="whitespace-pre-line text-body text-foreground">{{ $project->description }}</p>
+            {{-- The RichEditor description is already-sanitized HTML produced by Filament's
+                 own allowlisted node/mark schema (see ProjectForm's own comment) — same
+                 pattern as the blog article body. --}}
+            <div class="text-body text-foreground [&>*+*]:mt-4">
+                {!! $project->description !!}
+            </div>
 
             @if ($project->softwareProject)
                 <div class="mt-2 flex flex-col gap-1 font-mono text-mono text-muted-foreground">
