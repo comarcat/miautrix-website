@@ -1,7 +1,19 @@
 <x-layouts::app
-    :title="$article->title . ' — miautrix'"
-    :description="$article->excerpt"
+    :title="$article->seo_title ?: ($article->title . ' — miautrix')"
+    :description="$article->meta_description ?: $article->excerpt"
+    :image="\App\Support\Seo\OgImage::resolve($article->og_image_id)"
+    :canonical="$article->canonical_url ?: route('blog.show', $article->slug)"
 >
+    <x-slot:jsonLd>
+        <x-json-ld :data="[
+            '@context' => 'https://schema.org',
+            '@type' => 'BlogPosting',
+            'headline' => $article->title,
+            'description' => $article->excerpt,
+            'url' => route('blog.show', $article->slug),
+            'datePublished' => optional($article->published_at)->toIso8601String(),
+        ]" />
+    </x-slot:jsonLd>
     <div class="flex flex-col gap-8">
         <x-breadcrumb :items="[
             ['label' => 'Home', 'href' => route('home')],

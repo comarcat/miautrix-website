@@ -1,2 +1,6 @@
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /admin
+Disallow: /livewire/update
+
+Sitemap: https://miautrix.tech/sitemap.xml

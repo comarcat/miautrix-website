@@ -7,6 +7,7 @@ use App\Http\Controllers\Public\ExperienceController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\MediaController;
 use App\Http\Controllers\Public\ProjectController;
+use App\Http\Controllers\Public\SitemapController;
 use App\Http\Controllers\Public\SkillsController;
 use App\Http\Controllers\Public\ThemeController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,7 @@ Route::view('/contact', 'public.contact')->name('contact');
 Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
 Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
 Route::get('/feed.xml', [BlogController::class, 'feed'])->name('feed');
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
