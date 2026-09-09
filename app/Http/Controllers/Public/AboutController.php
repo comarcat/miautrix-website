@@ -27,7 +27,12 @@ class AboutController extends Controller
         return view('public.about', [
             'profile' => $profile,
             'experiences' => $profile->experiences()->where('published', true)->with('company.logo')->get(),
-            'education' => $profile->education()->where('published', true)->with('logo')->get(),
+            // Found in review: "both studies at University of Winnipeg are separated one
+            // without image and the ESPE in the middle when that one is olders" — this had
+            // NO ordering at all, so it fell back to whatever order the database happened to
+            // return rows in. Most-recent-first, same convention Experience already uses.
+            'education' => $profile->education()->where('published', true)->with('logo')
+                ->orderByDesc('started_at')->orderBy('sort_order')->get(),
         ]);
     }
 }

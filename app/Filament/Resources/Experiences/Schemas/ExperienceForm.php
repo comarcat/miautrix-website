@@ -10,6 +10,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Component;
 use Filament\Schemas\Schema;
 
 class ExperienceForm
@@ -33,15 +34,7 @@ class ExperienceForm
                 Select::make('company_id')
                     ->relationship('company', 'name')
                     ->required()
-                    ->createOptionForm([
-                        TextInput::make('name')
-                            ->required(),
-                        MediaUploadField::make('logo')
-                            ->label('Logo')
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp']),
-                        TextInput::make('website_url')
-                            ->url(),
-                    ])
+                    ->createOptionForm(self::companyOptionForm())
                     ->createOptionUsing(function (array $data): int {
                         $path = $data['logo'] ?? null;
                         unset($data['logo']);
@@ -55,6 +48,48 @@ class ExperienceForm
                         }
 
                         return $company->getKey();
+                    })
+                    // Found in review: "I don't see the option to upload the image on the
+                    // Experience CRUD" — createOptionForm only ever covers a NEW company;
+                    // once one is already selected (e.g. "Digital Solutions", added before
+                    // it had a logo), there was no way to add or change its logo without
+                    // leaving to the separate Companies resource. editOptionForm adds the
+                    // pencil icon next to an already-selected option that opens this same
+                    // form pre-filled with the current values.
+                    ->editOptionForm(self::companyOptionForm())
+                    ->fillEditOptionActionFormUsing(function (Select $component): ?array {
+                        /** @var Company|null $company */
+                        $company = $component->getSelectedRecord();
+
+                        if (! $company) {
+                            return null;
+                        }
+
+                        return [
+                            'name' => $company->name,
+                            'logo' => $company->logo
+                                ? MediaUploadField::DIRECTORY . '/' . $company->logo->file_name
+                                : null,
+                            'website_url' => $company->website_url,
+                        ];
+                    })
+                    ->updateOptionUsing(function (array $data, Select $component): void {
+                        /** @var Company $company */
+                        $company = $component->getSelectedRecord();
+                        $path = $data['logo'] ?? null;
+                        unset($data['logo']);
+
+                        $currentPath = $company->logo
+                            ? MediaUploadField::DIRECTORY . '/' . $company->logo->file_name
+                            : null;
+
+                        if ($path !== $currentPath) {
+                            $data['logo_media_id'] = $path
+                                ? MediaUploadField::createMediaRecord($path, Company::class, $company->id)->id
+                                : null;
+                        }
+
+                        $company->update($data);
                     }),
                 TextInput::make('title')
                     ->required(),
@@ -76,5 +111,24 @@ class ExperienceForm
                     ->default(0),
                 self::seoFieldsSection(),
             ]);
+    }
+
+    /**
+     * Shared by both the "create a new company" and "edit the selected company" modals —
+     * same 3 fields either way, so they can't drift apart.
+     *
+     * @return array<int, Component>
+     */
+    private static function companyOptionForm(): array
+    {
+        return [
+            TextInput::make('name')
+                ->required(),
+            MediaUploadField::make('logo')
+                ->label('Logo')
+                ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp']),
+            TextInput::make('website_url')
+                ->url(),
+        ];
     }
 }

@@ -103,6 +103,59 @@ class CorePagesTest extends TestCase
         $response->assertSee('State University');
     }
 
+    /**
+     * Regression test for a real production report: "both studies at University of
+     * Winnipeg are separated one without image and the ESPE in the middle when that one is
+     * olders" — the About page's Education section had NO ordering at all, so it fell back
+     * to whatever order the database happened to return rows in.
+     */
+    public function test_the_about_pages_education_section_is_ordered_most_recent_first(): void
+    {
+        $profile = $this->profile();
+
+        // Inserted in a deliberately "wrong" order relative to date, matching how the real
+        // bug was found: the middle (oldest) row inserted between the two most-recent ones.
+        Education::create([
+            'profile_id' => $profile->id,
+            'institution' => 'University of Winnipeg',
+            'degree' => 'Management Certificate',
+            'field_of_study' => 'Management',
+            'started_at' => '2022-01-01',
+            'ended_at' => '2022-12-31',
+            'slug' => 'management-certificate',
+            'published' => true,
+            'sort_order' => 1,
+        ]);
+        Education::create([
+            'profile_id' => $profile->id,
+            'institution' => 'Army Polytechnic School (ESPE)',
+            'degree' => 'BS in Computer Science',
+            'field_of_study' => 'Systems Engineering',
+            'started_at' => '2005-01-01',
+            'ended_at' => '2005-12-31',
+            'slug' => 'espe-bsc',
+            'published' => true,
+            'sort_order' => 0,
+        ]);
+        Education::create([
+            'profile_id' => $profile->id,
+            'institution' => 'University of Winnipeg',
+            'degree' => 'Project Management Diploma',
+            'field_of_study' => 'Project Management',
+            'started_at' => '2022-01-01',
+            'ended_at' => '2022-12-31',
+            'slug' => 'pm-diploma',
+            'published' => true,
+            'sort_order' => 0,
+        ]);
+
+        $response = $this->get(route('about'));
+
+        $response->assertOk();
+        // The two 2022 entries (by sort_order) come before the 2005 one.
+        $response->assertSeeInOrder(['Project Management Diploma', 'Management Certificate', 'BS in Computer Science']);
+    }
+
     public function test_experience_page_returns_200_and_renders_only_published_experiences_ordered_by_started_at_desc(): void
     {
         $profile = $this->profile();
