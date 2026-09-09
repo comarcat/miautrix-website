@@ -24,9 +24,13 @@ class HeadersTest extends TestCase
         $response->assertHeader('Cross-Origin-Opener-Policy', 'same-origin');
         $response->assertHeader('Cross-Origin-Resource-Policy', 'same-origin');
         $response->assertHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-        $response->assertHeader('X-XSS-Protection', '0');
         $response->assertHeader('X-DNS-Prefetch-Control', 'off');
         $this->assertNotNull($response->headers->get('Permissions-Policy'));
+
+        // Regression test for a real secscanner.app finding: the header used to be sent as
+        // `0` (an explicit disable) — flagged "deprecated" regardless of value, since no
+        // browser shipping today honors this header at all. Removed entirely.
+        $response->assertHeaderMissing('X-XSS-Protection');
 
         $csp = $response->headers->get('Content-Security-Policy');
         $this->assertNotNull($csp);
@@ -40,6 +44,25 @@ class HeadersTest extends TestCase
         // it least.
         $this->assertStringContainsString("script-src 'self';", $csp);
         $this->assertStringContainsString("object-src 'none'", $csp);
+        // Regression test for a follow-up secscanner.app scan that still flagged CSP
+        // "critical": style-src carried 'unsafe-inline' (needed for Livewire's own
+        // auto-injected <style> block) instead of a nonce — see SecurityHeaders' own
+        // docblock. A nonce must be present and NOT the literal 'unsafe-inline' string.
+        $this->assertMatchesRegularExpression("/style-src 'self' 'nonce-[^']+';/", $csp);
+        $this->assertStringNotContainsString('unsafe-inline', $csp);
+    }
+
+    public function test_the_admin_panel_is_told_not_to_be_indexed(): void
+    {
+        // Regression test for a real secscanner.app finding: robots.txt used to
+        // Disallow: /admin, which only advertises the panel's location without actually
+        // stopping indexing — replaced with this, which does.
+        $response = $this->get('/admin/login');
+
+        $response->assertOk();
+        $response->assertHeader('X-Robots-Tag', 'noindex, nofollow');
+
+        $this->get('/')->assertHeaderMissing('X-Robots-Tag');
     }
 
     public function test_the_admin_login_page_also_carries_the_security_headers(): void
@@ -92,7 +115,7 @@ class HeadersTest extends TestCase
         // Laravel test (it sets the HTTPS server var from the URL's own scheme).
         $appHost = parse_url(config('app.url'), PHP_URL_HOST);
         $secure = $this->get("https://{$appHost}/");
-        $secure->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        $secure->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     }
 
     public function test_hsts_is_also_sent_when_terminated_by_a_proxy_over_plain_http(): void
@@ -103,7 +126,7 @@ class HeadersTest extends TestCase
         // X-Forwarded-Proto too, HSTS would silently never send in production at all.
         $response = $this->get('/', ['X-Forwarded-Proto' => 'https']);
 
-        $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+        $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
     }
 
     public function test_urls_generated_behind_the_proxy_use_https_not_the_plain_http_origin_connection(): void
@@ -124,5 +147,54 @@ class HeadersTest extends TestCase
         $response->assertOk();
         $response->assertSee('<link rel="canonical" href="https://', false);
         $response->assertSee('data-update-uri="https://', false);
+    }
+
+    /**
+     * Regression test tying the nonce fix (see SecurityHeaders' own docblock) to the actual
+     * page that needed it: /contact mounts a live Livewire component, whose own auto-injected
+     * <style> block must carry the same nonce this middleware puts in the CSP header, or the
+     * browser blocks it and the [wire\:loading] rules inside silently stop applying.
+     */
+    public function test_the_contact_pages_livewire_style_tag_carries_the_same_nonce_as_the_csp_header(): void
+    {
+        $response = $this->get('/contact');
+
+        $response->assertOk();
+
+        $csp = $response->headers->get('Content-Security-Policy');
+        $this->assertNotNull($csp);
+        $matched = preg_match("/style-src 'self' 'nonce-([^']+)';/", $csp, $matches);
+        $this->assertSame(1, $matched, 'CSP style-src must carry a nonce.');
+        $nonce = $matches[1];
+
+        $response->assertSee("<style nonce=\"{$nonce}\"", false);
+    }
+
+    /**
+     * Both public/robots.txt and public/.well-known/security.txt are plain static files, not
+     * routed — the test HTTP kernel dispatches through the router only and has no static-file
+     * fallback (nginx's try_files does, in production), so $this->get() 404s on them
+     * regardless of what's on disk. Asserted directly against the file instead.
+     */
+    public function test_robots_txt_no_longer_discloses_the_admin_panel_path(): void
+    {
+        // Regression test for a real secscanner.app finding — see
+        // test_the_admin_panel_is_told_not_to_be_indexed's own comment for the reasoning.
+        $contents = file_get_contents(public_path('robots.txt'));
+
+        $this->assertIsString($contents);
+        $this->assertStringNotContainsString('/admin', $contents);
+    }
+
+    public function test_security_txt_is_served_with_the_required_rfc_9116_fields(): void
+    {
+        $path = public_path('.well-known/security.txt');
+
+        $this->assertFileExists($path);
+
+        $contents = file_get_contents($path);
+        $this->assertIsString($contents);
+        $this->assertStringContainsString('Contact:', $contents);
+        $this->assertStringContainsString('Expires:', $contents);
     }
 }

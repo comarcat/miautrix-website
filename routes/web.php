@@ -36,7 +36,6 @@ Route::middleware('cache.public')->group(function (): void {
     Route::get('/resume', [ResumeController::class, 'index'])->name('resume');
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/{slug}', [ProjectController::class, 'show'])->name('projects.show');
-    Route::view('/contact', 'public.contact')->name('contact');
     // Found in review: "a new section to publish all social profiles there with their
     // logos near to the links" — every SocialProfile, not just the smaller subset
     // show_in_footer puts in the footer.
@@ -46,6 +45,19 @@ Route::middleware('cache.public')->group(function (): void {
 });
 Route::get('/feed.xml', [BlogController::class, 'feed'])->name('feed');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+
+// BUG FIXED (found investigating a secscanner.app report): /contact used to sit inside the
+// cache.public group above, directly contradicting that group's own comment ("EXCEPT ... and
+// /contact") — a real, severe bug, since this page mounts a live Livewire component
+// (ContactForm). Caching its rendered HTML freezes one visitor's CSRF token/wire:snapshot
+// into the response and serves it to every subsequent visitor verbatim (their own submit
+// would carry someone else's stale token), and — because Livewire's own script/style
+// auto-injection (SupportAutoInjectedAssets) listens on the RequestHandled event, which fires
+// only after the whole middleware stack (cache.public included) already returned — a page
+// cached before that listener runs is captured with NEITHER Livewire's <script> nor its
+// <style> tag at all, leaving the form entirely inert client-side. Moved out here, its own
+// route, never cached.
+Route::view('/contact', 'public.contact')->name('contact');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');

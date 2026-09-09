@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -27,6 +28,17 @@ use Symfony\Component\HttpFoundation\Response;
  * everything but /admin) and PANEL_CSP (relaxed, /admin only — Filament's own panel path, see
  * AdminPanelProvider::path()).
  *
+ * BUG FIXED (found in a follow-up secscanner.app scan, still "critical" on CSP): PUBLIC_CSP's
+ * style-src still carried 'unsafe-inline', needed for Livewire's own auto-injected
+ * `<!-- Livewire Styles --><style>...</style>` block (the `[wire\:loading]` display:none
+ * rules) — every public page that mounts a Livewire component (e.g. /contact's ContactForm)
+ * emits this. `Vite::useCspNonce()` generates one nonce per request; Livewire's own
+ * FrontendAssets already reads `Vite::cspNonce()` and stamps that same value onto its
+ * `<style>` tag automatically (no Livewire config needed) — swapping 'unsafe-inline' for
+ * 'nonce-{that value}' in style-src closes this without breaking that block. Livewire's
+ * *script* tag is a same-origin `<script src="...">` (an external file, not inline), so
+ * script-src needed no equivalent change — 'self' alone already permits it.
+ *
  * HSTS is only sent over an actual HTTPS connection — sending it over plain HTTP achieves
  * nothing (browsers ignore it per spec) and would just be noise in local dev. Production sits
  * behind Cloudflare terminating TLS and proxying to nginx over plain HTTP, so
@@ -43,9 +55,6 @@ use Symfony\Component\HttpFoundation\Response;
  *   above) nothing on this site is embedded cross-origin, embeds anything cross-origin, or
  *   needs a third-party browser feature (camera/mic/geolocation/etc — the contact form is a
  *   plain text form, nothing here uses any of them).
- * - X-XSS-Protection: the header itself is obsolete (no modern browser honors the legacy
- *   filter it controlled, and that filter had its own real XSS-bypass history) — current
- *   guidance is to send `0` explicitly (disable it) rather than omit the header or set `1`.
  * - X-DNS-Prefetch-Control: off — nothing on the site benefits from prefetching visited-link
  *   domains, so there's no reason to let it leak browsing patterns to the resolver.
  * - X-Content-Type-Options and Referrer-Policy were flagged "misconfigured" with a literal
@@ -54,12 +63,20 @@ use Symfony\Component\HttpFoundation\Response;
  *   response already (nginx's `add_header` appends rather than replaces, since the upstream
  *   PHP-FPM response already carries its own copy) — removed from nginx, this middleware is
  *   now the single source for both, on every response including Filament's panel.
+ *
+ * BUG FIXED (secscanner.app follow-up scan): X-XSS-Protection used to be sent as `0`, on the
+ * theory that explicitly disabling the legacy filter was better than omitting the header —
+ * that theory doesn't hold up against a scanner that flags the header's mere *presence* as
+ * "deprecated" regardless of value, and no browser shipping today honors any value of this
+ * header at all (Chrome/Edge dropped their XSS Auditor in 2019, Firefox never had one) — so
+ * sending `0` accomplishes nothing a browser will ever read. Removed entirely rather than
+ * argued over; CSP (already hardened above) is the real, effective replacement.
  */
 class SecurityHeaders
 {
-    private const PUBLIC_CSP = "default-src 'self'; "
+    private const PUBLIC_CSP_TEMPLATE = "default-src 'self'; "
         . "script-src 'self'; "
-        . "style-src 'self' 'unsafe-inline'; "
+        . "style-src 'self' 'nonce-%s'; "
         . "font-src 'self'; "
         . "img-src 'self' data:; "
         . "connect-src 'self'; "
@@ -104,12 +121,31 @@ class SecurityHeaders
 
     public function handle(Request $request, Closure $next): Response
     {
+        // Generated before $next() runs so it's available to Vite's own @vite() output and
+        // Livewire's FrontendAssets (which already reads Vite::cspNonce() on its own — see
+        // this class's own docblock) while the view renders; read back below to put the same
+        // value into the header.
+        $nonce = Vite::useCspNonce();
+
         $response = $next($request);
+
+        $isAdmin = $request->is('admin*');
 
         $response->headers->set(
             'Content-Security-Policy',
-            $request->is('admin*') ? self::PANEL_CSP : self::PUBLIC_CSP,
+            $isAdmin ? self::PANEL_CSP : sprintf(self::PUBLIC_CSP_TEMPLATE, $nonce),
         );
+
+        // Found in review: robots.txt used to Disallow: /admin, which a secscanner.app scan
+        // flagged as revealing the panel's location for no real benefit (Disallow only asks
+        // crawlers not to visit — it doesn't stop indexing, and publishes the path to anyone
+        // who reads the file, crawler or not). Removed that entry (public/robots.txt) AND
+        // added this — strictly better than either: it actively tells any crawler that does
+        // reach /admin (by any other means) not to index what it finds, without publishing
+        // the path anywhere at all.
+        if ($isAdmin) {
+            $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+        }
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
@@ -117,11 +153,18 @@ class SecurityHeaders
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
         $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
         $response->headers->set('Cross-Origin-Embedder-Policy', 'require-corp');
-        $response->headers->set('X-XSS-Protection', '0');
+        $response->headers->remove('X-XSS-Protection');
         $response->headers->set('X-DNS-Prefetch-Control', 'off');
 
         if ($request->secure() || $request->header('X-Forwarded-Proto') === 'https') {
-            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+            // 'preload' opts this domain's HSTS into browsers' own hardcoded preload list —
+            // eliminating the plain-HTTP window on a visitor's very first-ever visit, before
+            // any HSTS header could have reached them. Only the header token is added here;
+            // actually taking effect requires a separate, semi-irreversible step (submitting
+            // https://hstspreload.org — removal from a shipped browser takes months), which
+            // is the site owner's call to make deliberately, not something to do silently as
+            // a side effect of a header fix.
+            $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         }
 
         return $response;

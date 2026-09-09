@@ -220,4 +220,21 @@ class PageCacheTest extends TestCase
         $this->assertFalse(Cache::has('public-page:technical:skills'));
         $this->get(route('skills'))->assertSee('Networking & Security');
     }
+
+    /**
+     * Regression test for a real bug found while investigating an unrelated security-headers
+     * report: /contact used to sit inside the cache.public route group despite that group's
+     * own comment explicitly excluding it — a severe bug, since /contact mounts a live
+     * Livewire component. Caching its HTML freezes one visitor's CSRF token/wire:snapshot
+     * into the cached response and serves it to every subsequent visitor verbatim, AND —
+     * because Livewire's own script/style auto-injection listens on the RequestHandled event,
+     * which fires only after cache.public's own middleware already captured the response —
+     * a cached copy is captured with neither tag at all, leaving the form inert client-side.
+     */
+    public function test_the_contact_page_is_never_cached(): void
+    {
+        $this->get(route('contact'))->assertOk();
+
+        $this->assertFalse(Cache::has('public-page:technical:contact'));
+    }
 }
