@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Support\InitialsAvatarProvider;
 use App\Http\Middleware\EnsureMfaConfirmed;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
@@ -34,6 +35,23 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            // Found in review: Filament's own default avatar provider (UiAvatarsProvider)
+            // calls out to https://ui-avatars.com — a request `img-src 'self' data:` already
+            // blocks, and there's no picture-upload feature anywhere in this app for a real
+            // photo to replace it with. The starter kit's own pages never made that external
+            // call either (Flux's <flux:avatar :initials="...">, rendered locally) — this
+            // panel now matches that with the same local, initials-only badge.
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
+            // Found in review: Filament's own default keeps you on the record's edit page
+            // after a successful save (and lands a new record straight on ITS edit page too)
+            // rather than returning to the list — reported as confusing ("after saving,
+            // I should be back on the list"). A validation error never reaches this at all
+            // (Livewire halts on validate() before the save step runs), so the existing
+            // inline-under-each-field error display is untouched by this — it only changes
+            // where a SUCCESSFUL save sends you. Applies to every resource, not just the one
+            // it was found on.
+            ->resourceCreatePageRedirect('index')
+            ->resourceEditPageRedirect('index')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
