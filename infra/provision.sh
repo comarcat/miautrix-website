@@ -171,8 +171,12 @@ server {
     server_name ${APP_DOMAIN} www.${APP_DOMAIN};
     root ${DEPLOY_PATH}/current/public;
 
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    # Security response headers (X-Content-Type-Options, Referrer-Policy, CSP, etc.) are set
+    # by App\Http\Middleware\SecurityHeaders on every response, admin panel included — nginx
+    # used to also add X-Content-Type-Options/Referrer-Policy here, which only duplicated
+    # them (add_header appends rather than replaces, since the upstream PHP-FPM response
+    # already carries its own copy) — a real production Exploita scan flagged the resulting
+    # "nosniff, nosniff" as misconfigured. Removed; the app is the single source now.
 
     index index.php;
 
