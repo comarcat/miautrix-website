@@ -33,9 +33,10 @@ class SeoTest extends TestCase
 
         $urls = array_map('strval', $xml->xpath('//*[local-name()="loc"]'));
 
-        // 7 static pages + 1 published project + 1 published article — the unpublished
-        // project and the draft article must not appear at all.
-        $this->assertCount(9, $urls);
+        // 8 static pages (including /resume, added in review) + 1 published project +
+        // 1 published article — the unpublished project and the draft article must not
+        // appear at all.
+        $this->assertCount(10, $urls);
         $this->assertContains(route('projects.show', 'published-project'), $urls);
         $this->assertContains(route('blog.show', 'published-article'), $urls);
     }

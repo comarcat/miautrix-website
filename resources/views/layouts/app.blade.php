@@ -49,6 +49,7 @@
                 <a href="{{ route('experience') }}" class="hover:text-accent-text">Experience</a>
                 <a href="{{ route('skills') }}" class="hover:text-accent-text">Skills</a>
                 <a href="{{ route('projects.index') }}" class="hover:text-accent-text">Projects</a>
+                <a href="{{ route('resume') }}" class="hover:text-accent-text">Resume</a>
                 <a href="{{ route('blog.index') }}" class="hover:text-accent-text">Blog</a>
                 <a href="{{ route('contact') }}" class="hover:text-accent-text">Contact</a>
                 <x-theme-switcher :theme="$theme ?? 'technical'" />

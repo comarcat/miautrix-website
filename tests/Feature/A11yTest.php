@@ -82,6 +82,7 @@ class A11yTest extends TestCase
             route('skills'),
             route('projects.index'),
             route('projects.show', $project->slug),
+            route('resume'),
             route('contact'),
             route('blog.index'),
             route('blog.show', $article->slug),
