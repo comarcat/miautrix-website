@@ -3,8 +3,11 @@
 namespace Tests\Feature\Cache;
 
 use App\Models\Article;
+use App\Models\Profile;
 use App\Models\Project;
 use App\Models\ProjectCategory;
+use App\Models\SocialProfile;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
@@ -137,5 +140,42 @@ class PageCacheTest extends TestCase
         $this->assertFalse(Cache::has('public-page:technical:blog'));
         $this->assertFalse(Cache::has('public-page:technical:blog/doomed-article'));
         $this->get(route('blog.index'))->assertDontSee('Doomed Article');
+    }
+
+    /**
+     * Regression test for a real production report: the footer's social links (and the
+     * /connect page) are shared onto every public page via a layout-level composer, so
+     * without an observer a SocialProfile save would sit invisible behind every one of
+     * those pages' cached entries — not just home.
+     */
+    public function test_saving_a_social_profile_invalidates_every_static_public_page_cache_entry(): void
+    {
+        $profile = Profile::create([
+            'user_id' => User::factory()->create()->id,
+            'full_name' => 'Ada Lovelace',
+            'headline' => 'Software Engineer',
+            'bio' => 'Building reliable systems.',
+        ]);
+
+        foreach (['home', 'about', 'experience', 'skills', 'resume', 'projects.index', 'connect', 'blog.index'] as $routeName) {
+            $this->get(route($routeName))->assertOk();
+        }
+
+        foreach (['/', 'about', 'experience', 'skills', 'resume', 'projects', 'connect', 'blog'] as $key) {
+            $this->assertTrue(Cache::has("public-page:technical:{$key}"));
+        }
+
+        SocialProfile::create([
+            'profile_id' => $profile->id,
+            'platform' => 'LinkedIn',
+            'url' => 'https://www.linkedin.com/in/example',
+            'sort_order' => 0,
+        ]);
+
+        foreach (['/', 'about', 'experience', 'skills', 'resume', 'projects', 'connect', 'blog'] as $key) {
+            $this->assertFalse(Cache::has("public-page:technical:{$key}"));
+        }
+
+        $this->get(route('connect'))->assertSee('LinkedIn');
     }
 }

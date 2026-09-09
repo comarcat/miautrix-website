@@ -63,6 +63,7 @@
                 <a href="{{ route('projects.index') }}" class="hover:text-accent-text">Projects</a>
                 <a href="{{ route('resume') }}" class="hover:text-accent-text">Resume</a>
                 <a href="{{ route('blog.index') }}" class="hover:text-accent-text">Blog</a>
+                <a href="{{ route('connect') }}" class="hover:text-accent-text">Connect</a>
                 <a href="{{ route('contact') }}" class="hover:text-accent-text">Contact</a>
                 <x-theme-switcher :theme="$theme ?? 'technical'" />
             </nav>
@@ -74,8 +75,13 @@
     </main>
 
     <footer class="border-t border-border">
-        <div class="mx-auto max-w-(--container-content) px-4 py-6 text-sm text-muted-foreground">
-            &copy; {{ now()->year }} miautrix.
+        <div class="mx-auto flex max-w-(--container-content) flex-wrap items-center justify-between gap-4 px-4 py-6 text-sm text-muted-foreground">
+            <span>&copy; {{ now()->year }} miautrix.</span>
+
+            {{-- Found in review: "add to the social profiles, a field to check if it
+                 should appear on the footer of the website" — only the ones marked
+                 show_in_footer, unlike the full list on /connect. --}}
+            <x-footer-social-profiles />
         </div>
     </footer>
 </body>

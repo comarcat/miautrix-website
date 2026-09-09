@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Public\AboutController;
 use App\Http\Controllers\Public\BlogController;
+use App\Http\Controllers\Public\ConnectController;
 use App\Http\Controllers\Public\DocumentDownloadController;
 use App\Http\Controllers\Public\DocumentPreviewController;
 use App\Http\Controllers\Public\ExperienceController;
@@ -36,6 +37,10 @@ Route::middleware('cache.public')->group(function (): void {
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/{slug}', [ProjectController::class, 'show'])->name('projects.show');
     Route::view('/contact', 'public.contact')->name('contact');
+    // Found in review: "a new section to publish all social profiles there with their
+    // logos near to the links" — every SocialProfile, not just the smaller subset
+    // show_in_footer puts in the footer.
+    Route::get('/connect', [ConnectController::class, 'index'])->name('connect');
     Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
     Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
 });

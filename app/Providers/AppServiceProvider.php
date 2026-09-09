@@ -6,9 +6,11 @@ use App\Contracts\AnalyticsProviderInterface;
 use App\Models\Article;
 use App\Models\Project;
 use App\Models\Setting;
+use App\Models\SocialProfile;
 use App\Observers\ArticleObserver;
 use App\Observers\ProjectObserver;
 use App\Observers\SettingObserver;
+use App\Observers\SocialProfileObserver;
 use App\Support\Analytics\NullAnalyticsProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -75,6 +77,13 @@ class AppServiceProvider extends ServiceProvider
         // The home page now reads its hero text from Settings — busts the home page cache
         // on any Setting save/delete (see SettingObserver's own docblock).
         Setting::observe(SettingObserver::class);
+
+        // The footer's social links (via <x-footer-social-profiles /> in the layout — see
+        // App\View\Components\FooterSocialProfiles's own docblock for why a class-based
+        // component and not a View::composer) are rendered on every cached public page —
+        // busts every one of those cache entries on any SocialProfile save/delete (see
+        // SocialProfileObserver's own docblock).
+        SocialProfile::observe(SocialProfileObserver::class);
     }
 
     /**

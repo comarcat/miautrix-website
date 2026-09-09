@@ -68,6 +68,9 @@ class Profile extends Model
         return $this->hasMany(Skill::class);
     }
 
+    /**
+     * @return HasMany<SocialProfile, $this>
+     */
     public function socialProfiles(): HasMany
     {
         return $this->hasMany(SocialProfile::class);
