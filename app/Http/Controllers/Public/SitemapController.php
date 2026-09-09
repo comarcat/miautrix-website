@@ -25,6 +25,7 @@ class SitemapController extends Controller
             ->add(Url::create(route('experience'))->setPriority(0.8))
             ->add(Url::create(route('skills'))->setPriority(0.8))
             ->add(Url::create(route('projects.index'))->setPriority(0.8))
+            ->add(Url::create(route('resume'))->setPriority(0.7))
             ->add(Url::create(route('blog.index'))->setPriority(0.8))
             ->add(Url::create(route('contact'))->setPriority(0.5));
 

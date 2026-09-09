@@ -7,6 +7,7 @@ use App\Http\Controllers\Public\ExperienceController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\MediaController;
 use App\Http\Controllers\Public\ProjectController;
+use App\Http\Controllers\Public\ResumeController;
 use App\Http\Controllers\Public\SitemapController;
 use App\Http\Controllers\Public\SkillsController;
 use App\Http\Controllers\Public\ThemeController;
@@ -25,6 +26,12 @@ Route::middleware('cache.public')->group(function (): void {
     Route::get('/about', [AboutController::class, 'index'])->name('about');
     Route::get('/experience', [ExperienceController::class, 'index'])->name('experience');
     Route::get('/skills', [SkillsController::class, 'index'])->name('skills');
+    // Found in review: blueprint §4/§9 step 23 scoped a public /resume page (route table:
+    // "documents where kind=resume | public") — DocumentResource, the seeded placeholder
+    // Document row, and documents.download all shipped, but no route/view ever read them.
+    // An admin who uploaded a real resume via the admin panel had no way to see where a
+    // visitor would find or download it, because there was nowhere.
+    Route::get('/resume', [ResumeController::class, 'index'])->name('resume');
     Route::get('/projects', [ProjectController::class, 'index'])->name('projects.index');
     Route::get('/projects/{slug}', [ProjectController::class, 'show'])->name('projects.show');
     Route::view('/contact', 'public.contact')->name('contact');
