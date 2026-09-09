@@ -16,7 +16,7 @@ class SkillsController extends Controller
     {
         $skillCategories = SkillCategory::query()
             ->orderBy('sort_order')
-            ->with(['skills' => fn ($query) => $query->orderBy('sort_order')])
+            ->with(['skills' => fn ($query) => $query->orderBy('sort_order')->with('icon')])
             ->get();
 
         return view('public.skills', [
