@@ -3,6 +3,7 @@
 use App\Http\Controllers\Public\AboutController;
 use App\Http\Controllers\Public\BlogController;
 use App\Http\Controllers\Public\DocumentDownloadController;
+use App\Http\Controllers\Public\DocumentPreviewController;
 use App\Http\Controllers\Public\ExperienceController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\MediaController;
@@ -56,6 +57,10 @@ Route::get('/media/{media}/{filename}', [MediaController::class, 'show'])->name(
 // Streams the current version and increments download_count (§5, §9 step 17) — public only
 // for a published document.
 Route::get('/documents/{document}/download', DocumentDownloadController::class)->name('documents.download');
+
+// Inline viewer for the /resume page's embedded PDF (Content-Disposition: inline, no
+// download_count increment) — see DocumentPreviewController's own docblock.
+Route::get('/documents/{document}/preview', DocumentPreviewController::class)->name('documents.preview');
 
 // Sets the miautrix_theme cookie and redirects back (§9 step 20) — a plain form POST, not
 // a fetch call, so the browser's own navigation is what reloads the page with no flash.

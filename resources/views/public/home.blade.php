@@ -3,17 +3,18 @@
     description="A professional IT portfolio: featured projects, articles, and background."
 >
     <div class="flex flex-col gap-16">
+        {{-- Found in review: "I should be able to change the text before the blog post from
+             the admin console" — this eyebrow/heading/subheading now come from the Settings
+             resource (home_hero_eyebrow/home_hero_heading/home_hero_subheading), editable at
+             /admin/settings; see HomeController for the fallback defaults. --breakpoint-xs
+             (removed below) was a 375px MEDIA-QUERY breakpoint token (app.css), not a
+             content-width design token — using it as max-w-* pinned this hero to phone width
+             even on desktop. --}}
         <section class="flex flex-col gap-4">
-            <span class="font-mono text-mono uppercase tracking-wide text-muted-foreground">Portfolio · Blog · CMS</span>
-            {{-- Found in review: --breakpoint-xs is a 375px MEDIA-QUERY breakpoint token
-                 (app.css), not a content-width design token — using it as max-w-* pinned
-                 this hero (and, before this fix, every other page's body copy) to phone
-                 width even on desktop. Removed everywhere; content now fills the same
-                 --container-content width the header/nav already use. --}}
-            <h1 class="text-display text-foreground">Building reliable systems, end to end.</h1>
+            <span class="font-mono text-mono uppercase tracking-wide text-muted-foreground">{{ $heroEyebrow }}</span>
+            <h1 class="text-display text-foreground">{{ $heroHeading }}</h1>
             <p class="text-body text-muted-foreground">
-                A professional IT portfolio covering backend architecture, infrastructure, and
-                the projects behind it.
+                {{ $heroSubheading }}
             </p>
         </section>
 

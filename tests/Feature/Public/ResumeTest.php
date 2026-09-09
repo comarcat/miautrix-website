@@ -52,6 +52,12 @@ class ResumeTest extends TestCase
         $response->assertSee('Résumé');
         $response->assertSee('version 3');
         $response->assertSee(route('documents.download', $document), false);
+
+        // Found in review: "show the PDF in a section, not just a link" — embedded via an
+        // <iframe> pointed at the inline preview route, alongside (not instead of) the
+        // download button above.
+        $response->assertSee('<iframe', false);
+        $response->assertSee(route('documents.preview', $document), false);
     }
 
     public function test_the_resume_page_shows_an_empty_state_when_nothing_is_published(): void

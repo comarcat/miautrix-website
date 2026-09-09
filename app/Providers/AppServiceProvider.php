@@ -5,8 +5,10 @@ namespace App\Providers;
 use App\Contracts\AnalyticsProviderInterface;
 use App\Models\Article;
 use App\Models\Project;
+use App\Models\Setting;
 use App\Observers\ArticleObserver;
 use App\Observers\ProjectObserver;
+use App\Observers\SettingObserver;
 use App\Support\Analytics\NullAnalyticsProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -69,6 +71,10 @@ class AppServiceProvider extends ServiceProvider
         // Same for Article — found missing entirely in production review (see
         // ArticleObserver's own docblock).
         Article::observe(ArticleObserver::class);
+
+        // The home page now reads its hero text from Settings — busts the home page cache
+        // on any Setting save/delete (see SettingObserver's own docblock).
+        Setting::observe(SettingObserver::class);
     }
 
     /**

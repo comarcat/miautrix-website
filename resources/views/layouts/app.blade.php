@@ -16,6 +16,17 @@
     <link rel="preload" href="{{ asset('fonts/ibm-plex-sans-400.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="{{ asset('fonts/ibm-plex-sans-600.woff2') }}" as="font" type="font/woff2" crossorigin>
 
+    {{-- Found in review: "the favicon.ico is not updated still showing the old one" — the
+         public layout never declared an explicit <link rel="icon"> at all, so browsers fell
+         back to their own default /favicon.ico probe, and Cloudflare's edge had a 4-hour-old
+         cached copy of that bare URL. An explicit tag with a content-hash-free but
+         file-mtime-based version query string makes this a distinct URL every time the file
+         actually changes, so both the browser and Cloudflare treat it as new (a fresh URL is
+         never a cache HIT) — no manual Cloudflare purge needed, now or for any future swap. --}}
+    <link rel="icon" href="/favicon.ico?v={{ filemtime(public_path('favicon.ico')) }}" sizes="any">
+    <link rel="icon" href="/favicon.svg?v={{ filemtime(public_path('favicon.svg')) }}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v={{ filemtime(public_path('apple-touch-icon.png')) }}">
+
     <x-meta :title="$title" :description="$description" :image="$image" :canonical="$canonical" />
 
     {{-- Organization JSON-LD is site-wide (every page is part of the same site); a page's own
