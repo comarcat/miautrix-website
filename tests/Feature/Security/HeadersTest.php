@@ -35,14 +35,17 @@ class HeadersTest extends TestCase
         $csp = $response->headers->get('Content-Security-Policy');
         $this->assertNotNull($csp);
         $this->assertStringContainsString("default-src 'self'", $csp);
-        // The public site has no inline <script> of its own and no Alpine/x-data usage at
-        // all (grepped to confirm) — 'unsafe-eval'/'unsafe-inline' are only needed by
-        // Filament's own bundled admin UI (see SecurityHeaders::PANEL_CSP's own docblock),
-        // so the public policy must NOT carry either. Regression test for a real Exploita
-        // security-headers scan that graded this "misconfigured"/critical: the same relaxed
-        // policy used to be sent site-wide, defeating CSP's purpose on the pages that need
-        // it least.
-        $this->assertStringContainsString("script-src 'self';", $csp);
+        // 'unsafe-eval' IS required here — Livewire's wire:submit/wire:model directives (used
+        // by /contact's ContactForm) are evaluated through Alpine's Function-based evaluator
+        // internally, with no literal x-data attribute needed to trigger it. A prior version
+        // of this test asserted the opposite ("script-src 'self';", nothing else) and
+        // shipped a real production regression: submitting the contact form threw "Livewire
+        // Expression Error: ... 'unsafe-eval' is not an allowed source ... Expression:
+        // 'submit'" and silently did nothing. 'unsafe-inline' is NOT required on script-src
+        // (no inline <script> on the public site needs it) — only Filament's admin panel
+        // needs that (see SecurityHeaders::PANEL_CSP's own docblock).
+        $this->assertStringContainsString("script-src 'self' 'unsafe-eval';", $csp);
+        $this->assertStringNotContainsString("script-src 'self' 'unsafe-eval' 'unsafe-inline'", $csp);
         $this->assertStringContainsString("object-src 'none'", $csp);
         // Regression test for a follow-up secscanner.app scan that still flagged CSP
         // "critical": style-src carried 'unsafe-inline' (needed for Livewire's own

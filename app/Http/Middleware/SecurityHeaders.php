@@ -19,25 +19,35 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * BUG FIXED (found in a real Exploita security-headers scan, graded C, CSP flagged
  * "misconfigured"/critical): 'unsafe-eval' and 'unsafe-inline' on script-src used to be sent
- * on EVERY response, public site included — but neither is needed anywhere except Filament's
- * own bundled admin UI (see PANEL_CSP's docblock below). Sending them site-wide defeats CSP's
- * actual purpose (its whole point is blocking exactly this) on the pages that need it least:
- * the public site has no inline <script> of its own (grepped to confirm) other than
- * `<script type="application/ld+json">`, which script-src does not gate at all (a data block,
- * never executed), and no `x-data`/Alpine usage at all. Now split in two: PUBLIC_CSP (strict,
- * everything but /admin) and PANEL_CSP (relaxed, /admin only — Filament's own panel path, see
- * AdminPanelProvider::path()).
+ * on EVERY response, public site included — the intent was to scope both to Filament's admin
+ * UI only (see PANEL_CSP's docblock below) and drop them from PUBLIC_CSP entirely. Split in
+ * two: PUBLIC_CSP (everything but /admin) and PANEL_CSP (/admin only — Filament's own panel
+ * path, see AdminPanelProvider::path()).
+ *
+ * BUG FOUND AND FIXED (real production regression from the change above, caught testing the
+ * live contact form after a later fix): dropping 'unsafe-eval' from PUBLIC_CSP's script-src
+ * broke wire:submit on /contact outright — console showed "Livewire Expression Error:
+ * Evaluating a string as JavaScript violates ... 'unsafe-eval' is not an allowed source ...
+ * Expression: 'submit'". The original reasoning ("no x-data/Alpine usage" on the public site,
+ * confirmed by grepping for literal `x-data`/`x-on`/`x-bind` attributes) was true but beside
+ * the point: Livewire itself is built on Alpine internally, and evaluates every `wire:*`
+ * directive's expression (`wire:submit="submit"`, `wire:model="name"`, etc.) through Alpine's
+ * `Function`-based evaluator regardless of whether the page ever writes a literal `x-`
+ * attribute — the exact same requirement PANEL_CSP already carries for Filament, for the
+ * identical underlying reason. 'unsafe-eval' is back on PUBLIC_CSP's script-src; 'unsafe-
+ * inline' is not needed there (the error was specifically about eval, and the public site
+ * genuinely has no inline <script> that would need it).
  *
  * BUG FIXED (found in a follow-up secscanner.app scan, still "critical" on CSP): PUBLIC_CSP's
- * style-src still carried 'unsafe-inline', needed for Livewire's own auto-injected
+ * style-src carried 'unsafe-inline', needed for Livewire's own auto-injected
  * `<!-- Livewire Styles --><style>...</style>` block (the `[wire\:loading]` display:none
  * rules) — every public page that mounts a Livewire component (e.g. /contact's ContactForm)
  * emits this. `Vite::useCspNonce()` generates one nonce per request; Livewire's own
  * FrontendAssets already reads `Vite::cspNonce()` and stamps that same value onto its
  * `<style>` tag automatically (no Livewire config needed) — swapping 'unsafe-inline' for
  * 'nonce-{that value}' in style-src closes this without breaking that block. Livewire's
- * *script* tag is a same-origin `<script src="...">` (an external file, not inline), so
- * script-src needed no equivalent change — 'self' alone already permits it.
+ * *script* tag is a same-origin `<script src="...">` (an external file, not inline), so it
+ * needed no such nonce — only the 'unsafe-eval' fix above.
  *
  * HSTS is only sent over an actual HTTPS connection — sending it over plain HTTP achieves
  * nothing (browsers ignore it per spec) and would just be noise in local dev. Production sits
@@ -75,7 +85,7 @@ use Symfony\Component\HttpFoundation\Response;
 class SecurityHeaders
 {
     private const PUBLIC_CSP_TEMPLATE = "default-src 'self'; "
-        . "script-src 'self'; "
+        . "script-src 'self' 'unsafe-eval'; "
         . "style-src 'self' 'nonce-%s'; "
         . "font-src 'self'; "
         . "img-src 'self' data:; "
