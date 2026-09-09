@@ -5,8 +5,13 @@
     <div class="flex flex-col gap-16">
         <section class="flex flex-col gap-4">
             <span class="font-mono text-mono uppercase tracking-wide text-muted-foreground">Portfolio · Blog · CMS</span>
-            <h1 class="max-w-(--breakpoint-xs) text-display text-foreground">Building reliable systems, end to end.</h1>
-            <p class="max-w-(--breakpoint-xs) text-body text-muted-foreground">
+            {{-- Found in review: --breakpoint-xs is a 375px MEDIA-QUERY breakpoint token
+                 (app.css), not a content-width design token — using it as max-w-* pinned
+                 this hero (and, before this fix, every other page's body copy) to phone
+                 width even on desktop. Removed everywhere; content now fills the same
+                 --container-content width the header/nav already use. --}}
+            <h1 class="text-display text-foreground">Building reliable systems, end to end.</h1>
+            <p class="text-body text-muted-foreground">
                 A professional IT portfolio covering backend architecture, infrastructure, and
                 the projects behind it.
             </p>

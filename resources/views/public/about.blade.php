@@ -27,7 +27,10 @@
                 @endif
             </div>
 
-            <p class="max-w-(--breakpoint-xs) text-body text-foreground">{{ $profile->bio }}</p>
+            {{-- --breakpoint-xs is a 375px MEDIA-QUERY breakpoint token (app.css), not a
+                 content-width design token — using it here pinned this to phone width even
+                 on desktop (found in review, same bug across every other page's body copy). --}}
+            <p class="text-body text-foreground">{{ $profile->bio }}</p>
         </section>
 
         <section class="flex flex-col gap-6">

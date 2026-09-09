@@ -70,6 +70,20 @@ class PanelBootTest extends TestCase
         $this->assertSame('index', $panel->getResourceEditPageRedirect());
     }
 
+    /**
+     * Regression test for a real production request: "I like the /dashboard UI, make the
+     * admin match it" — that layout (resources/views/layouts/app/sidebar.blade.php)
+     * hardcodes <html class="dark"> with no toggle at all. The panel's dark mode is now
+     * forced the same way (no light/dark switcher), matching that always-dark feel.
+     */
+    public function test_the_panel_forces_dark_mode_with_no_switcher(): void
+    {
+        $panel = Filament::getPanel('admin');
+
+        $this->assertTrue($panel->hasDarkMode());
+        $this->assertTrue($panel->hasDarkModeForced());
+    }
+
     public function test_telescope_404s_outside_a_local_environment(): void
     {
         // APP_ENV=testing here (phpunit.xml), never local — TelescopeServiceProvider is only
