@@ -24,10 +24,12 @@ class HeadersTest extends TestCase
         $csp = $response->headers->get('Content-Security-Policy');
         $this->assertNotNull($csp);
         $this->assertStringContainsString("default-src 'self'", $csp);
-        // 'unsafe-eval' is required by Alpine.js/Livewire/Filament's own runtime (see
-        // SecurityHeaders' docblock) — without it, the admin panel silently breaks (the
-        // login button spins forever, the password field can't hide its own value).
-        $this->assertStringContainsString("script-src 'self' 'unsafe-eval'", $csp);
+        // 'unsafe-eval' and 'unsafe-inline' are both required by Filament's own bundled admin
+        // UI (see SecurityHeaders' docblock) — without them, the admin panel silently breaks:
+        // the login button spins forever, the password field can't hide its own value, and an
+        // authenticated panel page's own per-page inline bootstrap script never runs, breaking
+        // the sidebar layout.
+        $this->assertStringContainsString("script-src 'self' 'unsafe-eval' 'unsafe-inline'", $csp);
         $this->assertStringContainsString("style-src 'self' 'unsafe-inline'", $csp);
         $this->assertStringContainsString("object-src 'none'", $csp);
     }
