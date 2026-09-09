@@ -70,4 +70,23 @@ class InvalidatePublicPageCache
             Cache::forget("public-page:{$theme}:/");
         }
     }
+
+    /**
+     * The footer (and, for /connect, the full list) reads SocialProfile rows via a
+     * layout-level View::composer, so it renders on every single cached public page — unlike
+     * Project/Article, there's no single detail page to target. Rather than a true nuclear
+     * flush, this forgets every statically-known path from the 'cache.public' route group
+     * (§routes/web.php) plus home. The two {slug} detail pages (projects/*, blog/*) are left
+     * alone: they already get busted on their own publish/unpublish via forProject()/
+     * forArticle(), and enumerating every existing slug here just to catch a rarely-changed
+     * footer link isn't worth the extra query on every SocialProfile save.
+     */
+    public function forSocialProfiles(): void
+    {
+        $this->forHome();
+
+        foreach (['about', 'experience', 'skills', 'resume', 'projects', 'connect', 'blog'] as $routePath) {
+            $this->__invoke($routePath);
+        }
+    }
 }

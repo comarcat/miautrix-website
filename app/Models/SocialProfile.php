@@ -13,6 +13,8 @@ use Illuminate\Support\Carbon;
  * @property int $profile_id
  * @property string $platform
  * @property string $url
+ * @property bool $show_in_footer
+ * @property int|null $icon_media_id
  * @property int $sort_order
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -26,11 +28,28 @@ class SocialProfile extends Model
         'profile_id',
         'platform',
         'url',
+        'show_in_footer',
+        'icon_media_id',
         'sort_order',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'show_in_footer' => 'boolean',
+        ];
+    }
 
     public function profile(): BelongsTo
     {
         return $this->belongsTo(Profile::class);
+    }
+
+    /**
+     * @return BelongsTo<Media, $this>
+     */
+    public function icon(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'icon_media_id');
     }
 }

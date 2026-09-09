@@ -51,6 +51,8 @@ class Media extends SpatieMedia
         // Skills have no `published` gate of their own — a skill is public as soon as it
         // exists, so null here (same reasoning as profiles/companies above).
         ['table' => 'skills', 'column' => 'icon_media_id', 'publishedColumn' => null],
+        // Same for social_profiles — no `published` gate of its own.
+        ['table' => 'social_profiles', 'column' => 'icon_media_id', 'publishedColumn' => null],
     ];
 
     protected static function booted(): void
