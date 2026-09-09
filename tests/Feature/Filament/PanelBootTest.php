@@ -3,6 +3,7 @@
 namespace Tests\Feature\Filament;
 
 use App\Models\User;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -50,6 +51,23 @@ class PanelBootTest extends TestCase
         $response->assertOk();
         $response->assertSee(route('profile.edit'), false);
         $response->assertSee(route('security.edit'), false);
+    }
+
+    /**
+     * Regression test for a real production report: after a successful save, Filament's
+     * own default keeps you on the record's edit page (and a new record lands straight on
+     * ITS edit page) rather than returning you to the list — reported as "after saving, I
+     * should be back on the list". Panel-level, so every resource gets it, not just the one
+     * it was found on. A validation error never reaches this: Livewire halts on validate()
+     * before the save step runs, so the existing inline-under-each-field error display is
+     * unaffected — this only changes where a SUCCESSFUL save sends you.
+     */
+    public function test_saving_a_resource_redirects_to_its_list_page_not_back_to_the_record(): void
+    {
+        $panel = Filament::getPanel('admin');
+
+        $this->assertSame('index', $panel->getResourceCreatePageRedirect());
+        $this->assertSame('index', $panel->getResourceEditPageRedirect());
     }
 
     public function test_telescope_404s_outside_a_local_environment(): void
