@@ -14,22 +14,27 @@ use Illuminate\Console\Command;
  * real third-party logo images over HTTP, which has no business running automatically in
  * every environment (every teammate's local DB, CI) forever.
  *
- * Uses Google's public favicon service (https://www.google.com/s2/favicons) as the fetch
- * source, not a random image-search result — it resolves an institution's own favicon
- * straight from its own domain, which is far more likely to actually BE that institution's
- * real mark than picking whatever an image search ranks first. Each URL was verified by hand
- * (fetched and visually confirmed) before being hardcoded here — this command doesn't guess
- * at company identity or search results itself.
+ * Every URL below was fetched and visually confirmed by hand before being hardcoded here —
+ * this command doesn't guess at company identity or trust a search result. Two different
+ * sources, in order of preference:
+ * 1. The institution's OWN site's own <link rel="icon"> tag (MSP Corp, FESAECUADOR, Nexsys,
+ *    ESPE, Digital Solutions — found by fetching each homepage's HTML directly). This is the
+ *    institution's own asset, at its own chosen resolution — the most authoritative source
+ *    available.
+ * 2. Google's public favicon service (https://www.google.com/s2/favicons), only for
+ *    University of Winnipeg, whose own site didn't expose a fetchable direct icon URL as
+ *    easily — still resolves an institution's own favicon from its own domain, not a random
+ *    image-search result.
  *
- * Deliberately skips two entries rather than attaching a wrong or fake logo:
- * - "Digital Solutions" (Nov 2011 - Sep 2013, Quito, Ecuador): too generic a name to
- *   identify with any confidence — dozens of companies share it. Guessing would risk
- *   attaching a stranger's logo to this resume.
- * - Army Polytechnic School (ESPE): its real domain (espe.edu.ec) has no favicon Google's
- *   service can resolve (confirmed 404, not a transient failure) — no image to fetch at all,
- *   not a naming ambiguity like the one above.
- * Both entries still show correctly by name; they simply render without a logo, the same as
- * any entry an admin hasn't uploaded one for.
+ * BUG FIXED: the original version matched Education by institution NAME with ->first() —
+ * silently attaching the fetched logo to only ONE of the two Education rows sharing "University
+ * of Winnipeg (...)" as their institution (a Diploma and a Certificate), leaving the other
+ * with no logo at all. Now updates every matching row.
+ *
+ * "Digital Solutions" and Army Polytechnic School/ESPE were skipped in an earlier version of
+ * this command — too generic a name to identify with confidence, and no favicon resolvable
+ * via Google's service, respectively. Direct URLs supplied since then (found on both
+ * institutions' own sites) resolve both.
  */
 class FetchCompanyEducationLogos extends Command
 {
@@ -39,18 +44,38 @@ class FetchCompanyEducationLogos extends Command
 
     public function handle(): int
     {
-        $this->fetchForCompany('MSP Corp Prairies (Broadview Networks)', 'mspcorp.ca');
-        $this->fetchForCompany('FESAECUADOR', 'fesaecuador.com.ec');
-        $this->fetchForCompany('Nexsys', 'nexsysla.com');
+        $this->fetchForCompany(
+            'MSP Corp Prairies (Broadview Networks)',
+            'https://www.google.com/s2/favicons?domain=mspcorp.ca&sz=128',
+        );
+        $this->fetchForCompany(
+            'FESAECUADOR',
+            'https://www.google.com/s2/favicons?domain=fesaecuador.com.ec&sz=128',
+        );
+        $this->fetchForCompany(
+            'Nexsys',
+            'https://www.google.com/s2/favicons?domain=nexsysla.com&sz=128',
+        );
+        $this->fetchForCompany(
+            'Digital Solutions',
+            'https://digitalsolutions.com.ec/wp-content/uploads/2020/12/cropped-01-192x192.png',
+        );
 
-        $this->fetchForEducation('University of Winnipeg (Professional, Applied & Continuing Education)', 'uwinnipeg.ca');
+        $this->fetchForEducation(
+            'University of Winnipeg (Professional, Applied & Continuing Education)',
+            'https://www.google.com/s2/favicons?domain=uwinnipeg.ca&sz=128',
+        );
+        $this->fetchForEducation(
+            'Army Polytechnic School (ESPE), Quito, Ecuador',
+            'https://www.espe.edu.ec/wp-content/uploads/2018/10/logo_espe-300x300.png',
+        );
 
-        $this->info('Done. Skipped "Digital Solutions" (name too generic to identify with confidence) and Army Polytechnic School / ESPE (no favicon available at espe.edu.ec) — see this command\'s own docblock.');
+        $this->info('Done.');
 
         return self::SUCCESS;
     }
 
-    private function fetchForCompany(string $name, string $domain): void
+    private function fetchForCompany(string $name, string $url): void
     {
         $company = Company::where('name', $name)->first();
 
@@ -60,10 +85,10 @@ class FetchCompanyEducationLogos extends Command
             return;
         }
 
-        $path = MediaUploadField::fetchAndStore("https://www.google.com/s2/favicons?domain={$domain}&sz=128");
+        $path = MediaUploadField::fetchAndStore($url);
 
         if (! $path) {
-            $this->warn("Could not fetch a logo for \"{$name}\" from {$domain} — leaving it without one.");
+            $this->warn("Could not fetch a logo for \"{$name}\" from {$url} — leaving it without one.");
 
             return;
         }
@@ -74,27 +99,35 @@ class FetchCompanyEducationLogos extends Command
         $this->info("Attached a logo to \"{$name}\".");
     }
 
-    private function fetchForEducation(string $institution, string $domain): void
+    /**
+     * Every Education row matching $institution gets its OWN Media row (spatie's
+     * polymorphic model_id points at one specific record) — fetched once, then re-stored per
+     * row, since two rows can legitimately share an institution name (a Diploma and a
+     * Certificate from the same continuing-education program, in this resume's case).
+     */
+    private function fetchForEducation(string $institution, string $url): void
     {
-        $education = Education::where('institution', $institution)->first();
+        $educationEntries = Education::where('institution', $institution)->get();
 
-        if (! $education) {
+        if ($educationEntries->isEmpty()) {
             $this->warn("No Education row for \"{$institution}\" — skipping.");
 
             return;
         }
 
-        $path = MediaUploadField::fetchAndStore("https://www.google.com/s2/favicons?domain={$domain}&sz=128");
+        foreach ($educationEntries as $education) {
+            $path = MediaUploadField::fetchAndStore($url);
 
-        if (! $path) {
-            $this->warn("Could not fetch a logo for \"{$institution}\" from {$domain} — leaving it without one.");
+            if (! $path) {
+                $this->warn("Could not fetch a logo for \"{$institution}\" (#{$education->id}) from {$url} — leaving it without one.");
 
-            return;
+                continue;
+            }
+
+            $media = MediaUploadField::createMediaRecord($path, Education::class, $education->id);
+            $education->update(['logo_media_id' => $media->id]);
+
+            $this->info("Attached a logo to \"{$institution}\" (#{$education->id}).");
         }
-
-        $media = MediaUploadField::createMediaRecord($path, Education::class, $education->id);
-        $education->update(['logo_media_id' => $media->id]);
-
-        $this->info("Attached a logo to \"{$institution}\".");
     }
 }
