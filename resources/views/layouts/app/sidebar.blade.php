@@ -6,13 +6,19 @@
     <body class="min-h-screen bg-white dark:bg-zinc-800">
         <flux:sidebar sticky collapsible="mobile" class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.header>
-                <x-app-logo :sidebar="true" href="{{ route('dashboard') }}" wire:navigate />
+                <x-app-logo :sidebar="true" href="{{ config('app.url') }}/admin" />
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
             <flux:sidebar.nav>
+                {{-- Found in review: this "Dashboard" used to point at the leftover
+                     starter-kit placeholder (resources/views/dashboard.blade.php,
+                     route('dashboard')) — dead scaffold content, not the real admin.
+                     Points at Filament's actual admin dashboard now. Not wire:navigate:
+                     that's for SPA-style navigation between this app's own Livewire pages,
+                     and /admin is a whole separate Filament app on the same domain. --}}
                 <flux:sidebar.group :heading="__('Platform')" class="grid">
-                    <flux:sidebar.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>
+                    <flux:sidebar.item icon="home" href="{{ config('app.url') }}/admin">
                         {{ __('Dashboard') }}
                     </flux:sidebar.item>
                 </flux:sidebar.group>

@@ -44,6 +44,24 @@ class SecurityTest extends TestCase
         $response->assertSee('Enable 2FA');
     }
 
+    /**
+     * Regression test for a real production report: the sidebar's "Dashboard" link (shown
+     * on every settings page, security included) pointed at the leftover starter-kit
+     * placeholder (route('dashboard')) rather than the actual admin panel.
+     */
+    public function test_the_sidebars_dashboard_link_points_at_the_real_admin_panel(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->withSession(['auth.password_confirmed_at' => time()])
+            ->get(route('security.edit'));
+
+        $response->assertOk();
+        $response->assertSee(config('app.url') . '/admin', false);
+        $response->assertDontSee('href="' . route('dashboard') . '"', false);
+    }
+
     public function test_security_settings_page_requires_password_confirmation_when_enabled(): void
     {
         $user = User::factory()->create();
