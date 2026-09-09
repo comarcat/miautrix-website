@@ -15,6 +15,17 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Production sits behind Cloudflare, which terminates TLS and proxies to nginx over
+        // plain HTTP (nginx has no cert of its own — see infra/provision.sh's vhost, port 80
+        // only). Without this, Laravel never learns the original request was HTTPS: it
+        // generates route()/url()/asset() links (and Livewire's own AJAX endpoint URL) as
+        // http://, which the browser then refuses to reach at all under CSP's connect-src
+        // 'self' (a real bug found in production review — the admin login button hung
+        // forever because Livewire's own update request was blocked as cross-origin, an
+        // http:// URL on an https:// page). '*' is safe here: the LXC sits on a private
+        // subnet (10.11.1.31) with no direct public route — Cloudflare is the only path in.
+        $middleware->trustProxies(at: '*');
+
         // ResolveTheme shares $theme with every web-group view (E4-T2, §9 step 20) — the
         // public pages, dashboard, and settings pages all resolve through this group.
         // Filament's admin panel builds its own separate middleware stack in
