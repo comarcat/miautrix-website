@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Projects\Schemas;
 
 use App\Filament\Schemas\HasSeoFields;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -25,7 +26,10 @@ class ProjectForm
                 Textarea::make('summary')
                     ->required()
                     ->columnSpanFull(),
-                Textarea::make('description')
+                // Found in review: "please change the detail of the project from textbox to
+                // enhanced so I can put text with styles" — same RichEditor-stores-sanitized-
+                // HTML pattern already used for Article::body (see ArticleForm's own comment).
+                RichEditor::make('description')
                     ->required()
                     ->columnSpanFull(),
                 DatePicker::make('started_at')
