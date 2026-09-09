@@ -14,8 +14,11 @@
 #   ssh root@<lxc-ip> "journalctl -u provision.service --no-pager"   # check status/log after
 #
 # What this does NOT do, on purpose:
-#   - Does NOT install PostgreSQL. This project's database is a separate, already-running
-#     server (see .env's DB_HOST) — the LXC is web/app tier only.
+#   - Does NOT install the PostgreSQL *server*. This project's database is a separate,
+#     already-running server (see .env's DB_HOST) — the LXC is web/app tier only. It does
+#     install postgresql-client (§9 step 27) — infra/backup.sh needs pg_dump/psql to reach
+#     that remote server for the backup/restore drill, and this LXC has network access to it
+#     already; the build machine deliberately does not.
 #   - Does NOT install Redis. Queue/cache/session all use Laravel's database driver.
 #   - Does NOT clone the site or run migrations — that is infra/deploy.sh's job, run
 #     afterwards from the build machine.
@@ -43,12 +46,13 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get upgrade -y
 
-echo "==> installing nginx, PHP 8.4-FPM + required extensions, Node 24 LTS, git, composer, ufw, supervisor"
+echo "==> installing nginx, PHP 8.4-FPM + required extensions, Node 24 LTS, git, composer, ufw, supervisor, postgresql-client"
 apt-get install -y \
   nginx \
   php8.4-fpm php8.4-cli php8.4-pgsql php8.4-mbstring php8.4-xml php8.4-curl \
   php8.4-zip php8.4-gd php8.4-intl php8.4-bcmath php8.4-opcache \
-  git unzip curl ufw ca-certificates gnupg supervisor
+  git unzip curl ufw ca-certificates gnupg supervisor \
+  postgresql-client
 
 # Composer (official installer, checksum-verified)
 if ! command -v composer >/dev/null 2>&1; then
@@ -88,11 +92,23 @@ if [ -n "$DEPLOY_PUBKEY" ]; then
   chown "$DEPLOY_USER:$DEPLOY_USER" "$AUTH_KEYS"
 fi
 
-# infra/deploy.sh's REMOTE_RESTART step runs these two commands as $DEPLOY_USER via sudo — grant
-# exactly those, passwordless, nothing broader. A blanket NOPASSWD:ALL would let a compromised
-# deploy key do anything root can; this scopes it to the two reloads deploy actually needs.
+# A fixed-path, no-argument wrapper (not a raw `sudo cp`) so the sudoers grant below can be
+# exact rather than a blanket "deploy may cp anything anywhere as root" — that would let a
+# compromised deploy key overwrite any file on the box, not just this one config.
+cat > /usr/local/bin/miautrix-sync-queue-supervisor.sh <<'SYNC_SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
+cp /var/www/miautrix/current/infra/supervisor/queue-worker.conf /etc/supervisor/conf.d/queue-worker.conf
+supervisorctl reread
+supervisorctl update
+SYNC_SCRIPT
+chmod 755 /usr/local/bin/miautrix-sync-queue-supervisor.sh
+
+# infra/deploy.sh's REMOTE_RESTART step runs these as $DEPLOY_USER via sudo — grant exactly
+# these, passwordless, nothing broader. A blanket NOPASSWD:ALL would let a compromised deploy
+# key do anything root can; this scopes it to only what deploy actually needs.
 cat > /etc/sudoers.d/deploy-reload <<SUDOERS
-${DEPLOY_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl reload php8.4-fpm, /usr/bin/systemctl reload nginx, /usr/bin/supervisorctl restart queue-worker
+${DEPLOY_USER} ALL=(root) NOPASSWD: /usr/bin/systemctl reload php8.4-fpm, /usr/bin/systemctl reload nginx, /usr/bin/supervisorctl restart queue-worker, /usr/local/bin/miautrix-sync-queue-supervisor.sh
 SUDOERS
 chmod 440 /etc/sudoers.d/deploy-reload
 visudo -cf /etc/sudoers.d/deploy-reload
@@ -185,11 +201,35 @@ NGINX
 ln -sf /etc/nginx/sites-available/miautrix /etc/nginx/sites-enabled/miautrix
 rm -f /etc/nginx/sites-enabled/default
 
+echo "==> supervisor config for the queue worker (§9 step 27) — a bootstrap placeholder only.
+    provision.sh runs before any release is cloned, so there's nothing to copy the real file
+    FROM yet; infra/deploy.sh overwrites this from the repo's own infra/supervisor/
+    queue-worker.conf on every release, which is the actual source of truth from then on —
+    kept in sync automatically instead of two hand-maintained copies drifting apart."
+cat > "/etc/supervisor/conf.d/queue-worker.conf" <<SUPERVISOR
+[program:queue-worker]
+process_name=%(program_name)s
+directory=${DEPLOY_PATH}/current
+command=php ${DEPLOY_PATH}/current/artisan queue:work --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+user=www-data
+numprocs=1
+redirect_stderr=true
+stdout_logfile=${DEPLOY_PATH}/shared/storage/logs/queue-worker.log
+stopwaitsecs=3600
+SUPERVISOR
+
 echo "==> enabling services"
 systemctl enable --now php8.4-fpm
 systemctl enable --now supervisor
 nginx -t
 systemctl enable --now nginx
+
+# supervisor was possibly already running from a previous provision — reread/update rather
+# than relying on `enable --now` alone to have picked up a conf.d file added just above.
+supervisorctl reread
+supervisorctl update
 
 echo "==> done. Next: point DNS/Cloudflare at this host, obtain a TLS cert (e.g. certbot),"
 echo "    then run infra/deploy.sh from the build machine for the first real release."

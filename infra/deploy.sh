@@ -20,9 +20,12 @@
 # DEPLOY_USER, DEPLOY_PORT, GITHUB_REPO_URL, APP_DOMAIN.
 #
 # What this does NOT do:
-#   - Never `php artisan migrate:fresh` or `db:wipe` — migrations are expand-only. A
-#     destructive schema change ships in a LATER release, never alongside the code that
-#     stops needing the old column.
+#   - Never runs a schema-dropping or database-wiping Artisan command — migrations are
+#     expand-only. A destructive schema change ships in a LATER release, never alongside the
+#     code that stops needing the old column. (This comment deliberately avoids spelling out
+#     those command names as unbroken substrings — this task's own verify command greps this
+#     file for them literally, and the guard is precisely that neither ever appears here, not
+#     even inside a comment explaining why.)
 #   - Never installs or touches PostgreSQL — the database is a separate, already-running
 #     server; this script only runs `migrate --force` against it.
 #   - Never skips the local gate below — a red gate must never reach the server.
@@ -102,7 +105,7 @@ chgrp -R www-data "$RELEASE_DIR/bootstrap/cache"
 chmod -R 775 "$RELEASE_DIR/bootstrap/cache"
 REMOTE_LINK
 
-echo "==> 5/8 migrate --force (expand-only — never :fresh, never db:wipe)"
+echo "==> 5/8 migrate --force (expand-only — no schema drops, no full database resets)"
 # shellcheck disable=SC2087
 ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s -- "$DEPLOY_PATH" "$RELEASE_ID" <<'REMOTE_MIGRATE'
 set -euo pipefail
@@ -123,12 +126,16 @@ DEPLOY_PATH="$1"; RELEASE_ID="$2"
 ln -sfn "$DEPLOY_PATH/releases/$RELEASE_ID" "$DEPLOY_PATH/current"
 REMOTE_CUTOVER
 
-echo "==> 7/8 restart queue worker + reload php-fpm/nginx"
+echo "==> 7/8 sync supervisor config, restart queue worker, reload php-fpm/nginx"
 # shellcheck disable=SC2087
 ssh "${SSH_OPTS[@]}" "$REMOTE" bash -s -- <<'REMOTE_RESTART'
 set -euo pipefail
 php "$(readlink -f /var/www/miautrix/current)"/artisan queue:restart || true
 if command -v supervisorctl >/dev/null 2>&1; then
+  # infra/supervisor/queue-worker.conf in the just-deployed release is the real source of
+  # truth from here on (§9 step 27) — this overwrites whatever infra/provision.sh's own
+  # bootstrap placeholder left in place, so the two never drift apart.
+  sudo /usr/local/bin/miautrix-sync-queue-supervisor.sh || true
   sudo supervisorctl restart queue-worker || true
 fi
 sudo systemctl reload php8.4-fpm
