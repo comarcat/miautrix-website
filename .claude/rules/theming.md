@@ -1,5 +1,5 @@
 ---
-description: Design token and shared-component conventions for the Technical and Matrix themes
+description: Design token and shared-component conventions for the Console and Matrix themes
 paths:
   - "resources/css/**"
   - "resources/views/components/**"
@@ -13,8 +13,11 @@ paths:
   parallel `themes/matrix/` or `themes/technical/` directory.
 - **Every color in a component is a `--color-*` custom property.** No raw hex value, no Tailwind
   arbitrary color value (`bg-[#00ff41]`), ever, in a shared component.
-- **Theme A ("Technical") respects `prefers-color-scheme`** and can be manually overridden. Its
-  tokens live on `:root` and under `@media (prefers-color-scheme: dark)`.
+- **Theme A ("Console" — the internal cookie/data-theme value is still `technical`, kept for
+  cache-key/backward-compat reasons; only the user-facing label changed) respects
+  `prefers-color-scheme`** and can be manually overridden. Its tokens live on `:root` and under
+  `@media (prefers-color-scheme: dark)`; its `--font-sans` is Courier New, overridden explicitly
+  back to IBM Plex Sans inside `[data-theme='matrix']` so the two don't leak into each other.
 - **Theme B ("Matrix") is always dark and overrides system preference entirely.** Its tokens live
   under `[data-theme="matrix"]`. The theme switcher UI must make this override visible to the
   visitor — never a silent surprise.

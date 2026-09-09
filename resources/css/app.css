@@ -78,7 +78,12 @@
     --container-content: 1280px;
 }
 
-/* Theme A "Technical" (default) — light values, respects prefers-color-scheme for dark. */
+/* Theme A "Console" (internal value 'technical', default) — light values, respects
+   prefers-color-scheme for dark. Found in review: the display name changed from
+   "Technical" to "Console" to match its look, so its own font-sans changes here too —
+   Courier New, not the site-wide IBM Plex Sans — while Matrix explicitly keeps IBM Plex
+   Sans below (a plain :root override here would otherwise leak into Matrix too, since
+   --font-sans is only ever set once in the @theme block otherwise). */
 :root {
     --background: #FAFAFA;
     --foreground: #09090B;
@@ -97,6 +102,7 @@
     --destructive: #DC2626;
     --on-destructive: #FFFFFF;
     --ring: #2563EB;
+    --font-sans: 'Courier New', Courier, monospace;
 }
 
 /* Theme A dark (prefers-color-scheme) — never applies once [data-theme="matrix"] is set;
@@ -145,6 +151,7 @@
     --destructive: #EF4444;
     --on-destructive: #FFFFFF;
     --ring: #00FF41;
+    --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Self-hosted fonts (§7) — woff2 only, font-display: swap, weights actually used by the
