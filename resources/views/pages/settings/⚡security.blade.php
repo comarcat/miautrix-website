@@ -185,6 +185,13 @@ new #[Title('Security settings')] class extends Component {
 <section class="w-full">
     @include('partials.settings-heading')
 
+    @if (session('mfaRequired'))
+        <div class="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+            <p class="font-medium">{{ __('Two-factor authentication required') }}</p>
+            <p class="mt-1">{{ __('The admin panel requires two-factor authentication before it lets you in. Enable 2FA below, then head back to the admin panel to manage the site\'s content.') }}</p>
+        </div>
+    @endif
+
     <flux:heading level="2" class="sr-only">{{ __('Security settings') }}</flux:heading>
 
     <x-pages::settings.layout :heading="__('Update password')" :subheading="__('Ensure your account is using a long, random password to stay secure')">
