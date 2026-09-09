@@ -89,4 +89,24 @@ class HeadersTest extends TestCase
 
         $response->assertHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     }
+
+    public function test_urls_generated_behind_the_proxy_use_https_not_the_plain_http_origin_connection(): void
+    {
+        // Regression test for a real production bug: without trustProxies() configured in
+        // bootstrap/app.php, Laravel never learned the original request was HTTPS and
+        // generated route()/url() links (including Livewire's own AJAX endpoint URL) as
+        // http://, which the browser then refused to reach at all under connect-src 'self'
+        // (a scheme mismatch on an https:// page) — the admin login button hung forever as
+        // a direct result. bootstrap/app.php's trustProxies(at: '*') is what fixes this.
+        //
+        // Asserted against /contact, not home: it's the one public page that actually mounts
+        // a Livewire component (ContactForm) and so is the only one that renders
+        // data-update-uri at all — home has no Livewire component on it, so this assertion
+        // would vacuously pass there regardless of whether the proxy fix works.
+        $response = $this->get('/contact', ['X-Forwarded-Proto' => 'https']);
+
+        $response->assertOk();
+        $response->assertSee('<link rel="canonical" href="https://', false);
+        $response->assertSee('data-update-uri="https://', false);
+    }
 }
