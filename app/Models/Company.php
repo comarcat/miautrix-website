@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -30,5 +31,13 @@ class Company extends Model
     public function experiences(): HasMany
     {
         return $this->hasMany(Experience::class);
+    }
+
+    /**
+     * @return BelongsTo<Media, $this>
+     */
+    public function logo(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'logo_media_id');
     }
 }

@@ -2,11 +2,14 @@
 
 namespace App\Filament\Support;
 
+use App\Models\Media;
 use App\Rules\AllowedMediaMime;
 use Filament\Forms\Components\FileUpload;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Throwable;
 
 /**
  * A pre-hardened FileUpload factory (§9 step 16) — every real upload field in the admin
@@ -92,6 +95,103 @@ class MediaUploadField
         }
 
         return $path;
+    }
+
+    /**
+     * Turns a path already on the private-media disk (from store() above, or from
+     * fetchAndStore() below) into a real Media row tied to a specific owning record. Shared
+     * by every resource that attaches a logo/photo this way (Company, Education) so the
+     * spatie Media column list doesn't drift resource by resource — DocumentResource has its
+     * own version of this inline (it also bumps a `version` column no other model has).
+     */
+    public static function createMediaRecord(string $path, string $modelType, int $modelId): Media
+    {
+        $filename = basename($path);
+        $disk = Storage::disk(self::DISK);
+
+        return Media::create([
+            'model_type' => $modelType,
+            'model_id' => $modelId,
+            'collection_name' => 'default',
+            'name' => pathinfo($filename, PATHINFO_FILENAME),
+            'file_name' => $filename,
+            'mime_type' => $disk->mimeType($path) ?: 'application/octet-stream',
+            'disk' => self::DISK,
+            'size' => $disk->size($path),
+            'manipulations' => [],
+            'custom_properties' => [],
+            'generated_conversions' => [],
+            'responsive_images' => [],
+        ]);
+    }
+
+    /**
+     * Downloads a logo from a URL found on the web (§9's own review pass — "pull that
+     * information from the web and save it to our site") and stores it exactly the way an
+     * admin's own upload would: re-encoded through GD (strips anything that isn't real pixel
+     * data), UUID filename, WebP sibling. Returns null on any failure (non-2xx, unreadable
+     * image, oversized response) rather than throwing — a missing logo is nothing worse than
+     * what every one of these entities already renders without one.
+     */
+    public static function fetchAndStore(string $url): ?string
+    {
+        try {
+            $response = Http::timeout(10)->get($url);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $bytes = $response->body();
+
+        // A generous but real ceiling — this is a logo, not an asset dump; refuses to store
+        // whatever a misbehaving or malicious URL decided to hand back.
+        if ($bytes === '' || strlen($bytes) > 5 * 1024 * 1024) {
+            return null;
+        }
+
+        $mime = strtolower(trim(explode(';', $response->header('Content-Type'))[0]));
+
+        $extension = match ($mime) {
+            'image/jpeg', 'image/jpg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            default => null,
+        };
+
+        if ($extension === null) {
+            return null;
+        }
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'logo-fetch-');
+
+        if ($tmpPath === false) {
+            return null;
+        }
+
+        file_put_contents($tmpPath, $bytes);
+
+        try {
+            $storedName = (string) Str::uuid() . '.' . $extension;
+            $path = self::DIRECTORY . '/' . $storedName;
+            $normalizedMime = $mime === 'image/jpg' ? 'image/jpeg' : $mime;
+            $image = self::loadImageIfSupported($tmpPath, $normalizedMime);
+
+            if ($image === null) {
+                return null;
+            }
+
+            Storage::disk(self::DISK)->put($path, self::encode($image, $normalizedMime));
+            self::storeWebpSibling($image, $normalizedMime, $path);
+            imagedestroy($image);
+
+            return $path;
+        } finally {
+            @unlink($tmpPath);
+        }
     }
 
     private static function uuidNameFor(TemporaryUploadedFile $file): string
