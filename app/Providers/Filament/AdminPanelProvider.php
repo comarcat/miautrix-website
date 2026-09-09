@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Http\Middleware\EnsureMfaConfirmed;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -11,6 +12,7 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
@@ -41,6 +43,24 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 AccountWidget::class,
                 FilamentInfoWidget::class,
+            ])
+            // Found in review: this panel has no ->profile() page of its own, and its
+            // default user menu has nowhere to manage the admin's OWN account — including
+            // 2FA. That left literally no link, from inside the panel, back to the
+            // password/2FA/passkey settings a super_admin might need to change (only the
+            // one-way EnsureMfaConfirmed redirect got them there the first time). These two
+            // items point at the same starter-kit settings pages (routes/settings.php,
+            // never gated by EnsureMfaConfirmed) the MFA-required banner already links to.
+            ->userMenuItems([
+                'profile' => Action::make('profile')
+                    ->label('My profile')
+                    ->icon(Heroicon::UserCircle)
+                    ->url(fn () => route('profile.edit')),
+                'security' => Action::make('security')
+                    ->label('Security & 2FA')
+                    ->icon(Heroicon::ShieldCheck)
+                    ->url(fn () => route('security.edit'))
+                    ->sort(0),
             ])
             ->middleware([
                 EncryptCookies::class,

@@ -231,11 +231,21 @@ new class extends Component {
                                 <flux:icon.loading/>
                             </div>
                         @else
+                            {{--
+                                Found in review: this used to invert+brighten the QR in dark
+                                mode (`filter: invert(1) brightness(1.5)`), meant to make it
+                                visible against the modal's own dark background. But the QR
+                                already sits on its own explicit `bg-white` card below — that
+                                card is opaque regardless of app theme, so the invert filter
+                                was applied on TOP of an already-white background, inverting a
+                                normal black-on-white QR into a low-contrast, washed-out image
+                                that a phone camera can fail to recognize at all. A QR code
+                                needs strong black/white contrast to scan reliably; it should
+                                never follow the app's own dark mode. Scanning it in Fortify's
+                                standard un-inverted colors is what actually works.
+                            --}}
                             <div x-data class="flex items-center justify-center h-full p-4">
-                                <div
-                                    class="bg-white p-3 rounded"
-                                    :style="($flux.appearance === 'dark' || ($flux.appearance === 'system' && $flux.dark)) ? 'filter: invert(1) brightness(1.5)' : ''"
-                                >
+                                <div class="bg-white p-3 rounded">
                                     {!! $qrCodeSvg !!}
                                 </div>
                             </div>
