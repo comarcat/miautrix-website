@@ -42,6 +42,26 @@
     @endisset
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    {{-- E3-T4 (§9 step 20) — special-event theme token overrides. Only when the dynamic
+         flag is on AND the active theme is not one of the two seed themes (technical/matrix
+         render entirely from app.css, unchanged). Values are hard-sanitised (no <>{};) and
+         keys are constrained to a CSS custom-property shape, so {!! !!} is safe here; the
+         block carries the per-request CSP nonce SecurityHeaders sets. --}}
+    @if (config('site.themes.dynamic') && ! in_array($theme ?? 'technical', ['technical', 'matrix'], true))
+        @php
+            $activeTheme = \App\Models\Theme::query()->where('key', $theme)->first();
+            $tokenCss = collect($activeTheme?->tokens ?? [])
+                ->filter(fn ($value, $key) => is_string($key)
+                    && preg_match('/^--[A-Za-z0-9-]+$/', $key) === 1
+                    && (is_string($value) || is_numeric($value)))
+                ->map(fn ($value, $key) => $key . ':' . preg_replace('/[<>{};]/', '', (string) $value))
+                ->implode(';');
+        @endphp
+        @if ($activeTheme)
+            <style nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">:root{ {!! $tokenCss !!} }</style>
+        @endif
+    @endif
 </head>
 <body class="min-h-screen bg-background text-foreground font-sans antialiased">
     <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-input focus:bg-primary focus:px-4 focus:py-2 focus:text-on-primary">

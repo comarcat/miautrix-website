@@ -536,7 +536,7 @@
    "resources/views/components/theme-switcher.blade.php",
    "tests/Feature/Phase2/ThemeTokenInjectionTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E3-T5",
