@@ -1,6 +1,6 @@
 @php
     /**
-     * E1-T3 (Phase 2, p2-step-03) — the styled maintenance page.
+     * E1-T3 / E1-T4 (Phase 2, p2-step-03 / p2-step-04) — the styled maintenance page.
      *
      * Laravel renders this automatically while `php artisan down` is in effect, BEFORE the
      * app layout, the Vite manifest, or the CSP middleware are in play — so it is a
@@ -9,14 +9,32 @@
      * light + dark via prefers-color-scheme). No @vite, no external URL, no `style="…"`
      * attribute.
      *
-     * The estimated return time is computed here as a 30-minute default; E1-T4 overrides
-     * `$eta` with the real `Retry-After` / cached value the operator sets when taking the
-     * site down. Both a machine-readable ISO timestamp (for the JS countdown) and a
-     * plain-text sentence (which needs no JS at all — acceptance criterion 2) are rendered.
+     * ETA source (E1-T4): when the site is taken down with
+     * `php artisan down --render="errors::503" --retry=N`, Laravel's maintenance middleware
+     * throws an HttpException carrying a `Retry-After: N` header, which the exception handler
+     * passes to this view as `$exception`. That is the ONLY reliable ETA signal here. When it
+     * is present the countdown target is `now() + N seconds`, rendered as an ISO-8601 string
+     * inside `data-countdown`. When it is absent (a plain `php artisan down`), there is no
+     * countdown element at all — just a static "shortly" line — so the client never sees a
+     * half-initialised timer (acceptance criterion 2).
      */
     use Illuminate\Support\Carbon;
 
-    $eta = ($eta ?? null) instanceof Carbon ? $eta : Carbon::now()->addMinutes(30);
+    $retryAfter = null;
+
+    if (isset($exception) && method_exists($exception, 'getHeaders')) {
+        $header = $exception->getHeaders()['Retry-After'] ?? null;
+        $retryAfter = is_numeric($header) ? (int) $header : null;
+    }
+
+    // Explicit override still wins (used by the direct-render test and any future caller).
+    if (($eta ?? null) instanceof Carbon) {
+        $retryAfter = (int) round(Carbon::now()->diffInSeconds($eta, false));
+    }
+
+    $eta = $retryAfter !== null && $retryAfter > 0
+        ? Carbon::now()->addSeconds($retryAfter)
+        : null;
 @endphp
 <!doctype html>
 <html lang="en">
@@ -100,38 +118,46 @@
     <main class="panel">
         <h1>We&rsquo;ll be back soon</h1>
         <p>miautrix is down for a short, planned maintenance window.</p>
-        <p>We expect to be back around
-            <strong>{{ $eta->format('H:i') }} UTC</strong>
-            ({{ $eta->diffForHumans(['parts' => 2, 'short' => true]) }}).
-        </p>
-        <p class="countdown" data-countdown="{{ $eta->toIso8601String() }}" aria-hidden="true"></p>
+        @if ($eta)
+            <p>We expect to be back around
+                <strong>{{ $eta->format('H:i') }} UTC</strong>
+                ({{ $eta->diffForHumans(['parts' => 2, 'short' => true]) }}).
+            </p>
+            <p class="countdown" data-countdown="{{ $eta->toIso8601String() }}" aria-hidden="true"></p>
+        @else
+            <p>We expect to be back shortly. Please check again in a few minutes.</p>
+        @endif
     </main>
 
-    <script>
-        (function () {
-            var el = document.querySelector('[data-countdown]');
-            if (!el) { return; }
-            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { return; }
+    @if ($eta)
+        {{-- Countdown script emitted only when there is a target — with no ETA there is no
+             element to tick, so no script ships either (acceptance criterion 2). --}}
+        <script>
+            (function () {
+                var el = document.querySelector('.countdown[data-countdown]');
+                if (!el) { return; }
+                if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) { return; }
 
-            var target = new Date(el.getAttribute('data-countdown')).getTime();
+                var target = new Date(el.getAttribute('data-countdown')).getTime();
 
-            function pad(n) { return (n < 10 ? '0' : '') + n; }
+                function pad(n) { return (n < 10 ? '0' : '') + n; }
 
-            function tick() {
-                var remaining = target - Date.now();
-                if (remaining <= 0) {
-                    el.textContent = 'Refreshing…';
-                    setTimeout(function () { location.reload(); }, 3000);
-                    return;
+                function tick() {
+                    var remaining = target - Date.now();
+                    if (remaining <= 0) {
+                        el.textContent = 'Refreshing…';
+                        setTimeout(function () { location.reload(); }, 3000);
+                        return;
+                    }
+                    var mins = Math.floor(remaining / 60000);
+                    var secs = Math.floor((remaining % 60000) / 1000);
+                    el.textContent = 'Back in ' + pad(mins) + ':' + pad(secs);
+                    setTimeout(tick, 1000);
                 }
-                var mins = Math.floor(remaining / 60000);
-                var secs = Math.floor((remaining % 60000) / 1000);
-                el.textContent = 'Back in ' + pad(mins) + ':' + pad(secs);
-                setTimeout(tick, 1000);
-            }
 
-            tick();
-        })();
-    </script>
+                tick();
+            })();
+        </script>
+    @endif
 </body>
 </html>

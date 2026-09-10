@@ -98,7 +98,7 @@
    "resources/views/errors/503.blade.php",
    "tests/Feature/Phase2/MaintenancePageTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E1-T5",
