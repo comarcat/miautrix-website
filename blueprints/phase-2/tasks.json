@@ -124,7 +124,7 @@
   "files": [
    "infra/deploy-staging.sh"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E1-T6",
