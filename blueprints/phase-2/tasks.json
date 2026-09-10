@@ -150,7 +150,7 @@
    "infra/provision-staging.md",
    "infra/host-parity-check.sh"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E1-T7",
