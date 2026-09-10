@@ -336,7 +336,7 @@
    "infra/provision-staging.md",
    "tests/Feature/Phase2/OgImageCrawlerAccessTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E2-T6",

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Public;
 
+use App\Models\Article;
 use App\Models\Media;
+use App\Models\Project;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,7 +26,10 @@ class MediaController extends Controller
             throw new NotFoundHttpException;
         }
 
-        if (! $this->ownerIsPublished($media)) {
+        // E2-T5 — social crawlers (Facebook, LinkedIn, Slack, iMessage) fetch og:image
+        // with no session. Allow the file through when it is the OG image of a *published*
+        // article or project, on top of the existing "owning entity is published" path.
+        if (! $this->ownerIsPublished($media) && ! $this->isPublishedEntityOgImage($media)) {
             throw new NotFoundHttpException;
         }
 
@@ -60,5 +65,27 @@ class MediaController extends Controller
         }
 
         return (bool) $owner->getAttribute('published');
+    }
+
+    /**
+     * True when this media row is the OG image of a currently-published article or project.
+     * Article publication gates on `published_at` (its scopePublished); Project on the
+     * `published` boolean (ProjectController@show). No FK is assumed — a plain column match.
+     */
+    private function isPublishedEntityOgImage(Media $media): bool
+    {
+        $isArticleOg = Article::query()
+            ->published()
+            ->where('og_image_id', $media->id)
+            ->exists();
+
+        if ($isArticleOg) {
+            return true;
+        }
+
+        return Project::query()
+            ->where('published', true)
+            ->where('og_image_id', $media->id)
+            ->exists();
     }
 }

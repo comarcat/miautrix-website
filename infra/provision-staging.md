@@ -96,16 +96,47 @@ just returns `null` for ISP/location.
 
 ## 6. Cloudflare bot-fight-mode exception for OG image URLs
 
-Cloudflare's Bot Fight Mode / "Block AI bots" can stop Facebook/X/LinkedIn crawlers from fetching the
-Open Graph preview image, which renders the share card blank (a real Phase-1 finding). Add a
-**Cloudflare WAF custom rule** (or a Bot Fight Mode skip) that *allows* requests to the media path
-used for OG images:
+Cloudflare's Bot Fight Mode / Super Bot Fight Mode / "Block AI bots" can challenge or block the
+Facebook / X / LinkedIn / Slack / iMessage crawlers when they `GET` the Open Graph preview image
+(`OgImage::resolve()` now returns an absolute `https://…/media/{id}/{file}` URL — E2-T4), which
+renders every share card blank (a real Phase-1 finding). Cutover step E2-T5 makes the origin serve
+that image to an unauthenticated request; this rule stops the edge from blocking it first.
 
-- Expression: `(http.request.uri.path contains "/media/") or (http.request.uri.path eq "/images/og-default.png")`
-- Action: **Skip** → Bot Fight Mode (and Super Bot Fight Mode "Definitely automated" / "Verified bots"
-  as needed), plus **Skip remaining custom rules**.
+### Dashboard (Security → WAF → Custom rules — add, then drag to the TOP)
 
-Apply this on **both** the apex zone and — if it is a separate zone — staging.
+| Field | Value |
+|---|---|
+| Rule name | `Skip bot protection for OG images` |
+| Expression (Edit expression) | `(http.request.uri.path contains "/media/") or (http.request.uri.path eq "/images/og-default.png")` |
+| Action | **Skip** |
+| Skip components | tick **Super Bot Fight Mode**, **All remaining custom rules**; under "Additional options" also tick **Bot Fight Mode** |
+| Place at | **First** |
+
+Bot Fight Mode (the free-plan toggle in Security → Bots) cannot itself carry an exception, so on a
+free plan you either upgrade to get the WAF **Skip → Bot Fight Mode** component above, or leave
+Bot Fight Mode **off** for the zone and rely on Super Bot Fight Mode + this rule.
+
+### API (Rulesets — `http_request_firewall_custom` phase, prepended)
+
+```json
+{
+  "description": "Skip bot protection for OG images",
+  "expression": "(http.request.uri.path contains \"/media/\") or (http.request.uri.path eq \"/images/og-default.png\")",
+  "action": "skip",
+  "action_parameters": {
+    "ruleset": "current",
+    "phases": ["http_request_sbfm"],
+    "products": ["bic"]
+  },
+  "enabled": true
+}
+```
+
+`POST /zones/{zone_id}/rulesets/phases/http_request_firewall_custom/entrypoint/rules` (or `PATCH`
+the existing entrypoint's `rules` array with this object first). `products: ["bic"]` is the Bot Fight
+Mode ("Browser Integrity Check") product; `phases: ["http_request_sbfm"]` covers Super Bot Fight Mode.
+
+Apply on **both** the apex zone and — if it is a separate zone — the `staging.miautrix.tech` zone.
 
 ## 7. Cloudflare Redirect Rule — canonicalise the host (apply LAST, after 48h of parity)
 
