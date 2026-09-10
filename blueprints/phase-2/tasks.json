@@ -392,7 +392,7 @@
    "app/Policies/SocialProfileGroupPolicy.php",
    "tests/Feature/Phase2/SocialGroupResourceTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E2-T8",

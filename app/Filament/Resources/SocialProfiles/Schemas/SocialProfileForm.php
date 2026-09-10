@@ -4,6 +4,7 @@ namespace App\Filament\Resources\SocialProfiles\Schemas;
 
 use App\Filament\Support\MediaUploadField;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
@@ -17,6 +18,29 @@ class SocialProfileForm
                 Select::make('profile_id')
                     ->relationship('profile', 'id')
                     ->required(),
+                // Phase 2 (E2-T7) — optional /connect section. Nullable: an unset group
+                // renders the profile under "Other". New groups can be created inline
+                // without leaving this form.
+                Select::make('group_id')
+                    ->label('Group')
+                    ->relationship('group', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->createOptionForm([
+                        TextInput::make('name')
+                            ->required()
+                            ->maxLength(255),
+                        TextInput::make('heading')
+                            ->required()
+                            ->maxLength(255),
+                        Textarea::make('intro_text')
+                            ->rows(3)
+                            ->maxLength(1000),
+                        TextInput::make('sort_order')
+                            ->required()
+                            ->numeric()
+                            ->default(0),
+                    ]),
                 TextInput::make('platform')
                     ->required(),
                 TextInput::make('url')
