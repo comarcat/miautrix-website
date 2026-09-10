@@ -480,7 +480,7 @@
    "app/Support/Theming/ThemeResolver.php",
    "tests/Unit/Phase2/ThemeResolverTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E3-T3",
