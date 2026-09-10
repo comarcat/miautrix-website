@@ -45,3 +45,6 @@ Thumbs.db
 #   blueprints/           (the design bundle travels with the code)
 #   .github/workflows/    (CI)
 #   phpstan.neon, pint.json, phpunit.xml, docker-compose.yml, tests/Pest.php, tests/TestCase.php
+
+# graphify knowledge-graph output (generated, not committed)
+/graphify-out/
