@@ -227,7 +227,7 @@
    "database/factories/ShareClickFactory.php",
    "tests/Feature/Phase2/ShareClickSchemaTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E2-T2",
