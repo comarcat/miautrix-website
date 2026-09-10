@@ -200,7 +200,7 @@
    "app/Http/Middleware/SecurityHeaders.php",
    "tests/Feature/Phase2/StagingNoindexTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E2-T1",

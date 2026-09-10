@@ -153,7 +153,12 @@ class SecurityHeaders
         // added this — strictly better than either: it actively tells any crawler that does
         // reach /admin (by any other means) not to index what it finds, without publishing
         // the path anywhere at all.
-        if ($isAdmin) {
+        //
+        // Phase 2 (E1-T8): the staging environment (staging.miautrix.tech) is a full copy of
+        // production for the sponsor to review before a production promote — it must never
+        // land in a search index. On `staging` the same header goes on EVERY route, public
+        // ones included, not just /admin. `production` and `local` are untouched.
+        if ($isAdmin || app()->environment('staging')) {
             $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
         }
         $response->headers->set('X-Content-Type-Options', 'nosniff');
