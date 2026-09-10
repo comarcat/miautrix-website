@@ -281,7 +281,7 @@
    "resources/views/public/blog/show.blade.php",
    "tests/Feature/Phase2/ShareRedirectTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E2-T4",

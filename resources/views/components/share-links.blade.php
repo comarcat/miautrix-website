@@ -2,24 +2,28 @@
     'url',
     'title' => '',
     'summary' => '',
+    // When both are set, each link points at the first-party /s/{network}/{type}/{id}
+    // click-logging redirect (E2-T3) instead of the network's own share endpoint directly.
+    'shareType' => null,
+    'shareId' => null,
 ])
 
 @php
     /**
-     * Phase 2 (E2-T2) — plain share-intent links, one per network. No SDK, no tracking
-     * script, no iframe. Every parameter is URL-encoded with rawurlencode(). The href points
-     * at the network's own share endpoint directly; the /s/{network}/{type}/{id} first-party
-     * click-logging redirect (E2-T3) wraps these where a subject id is known.
+     * Phase 2 (E2-T2 / E2-T3) — plain share-intent links, one per network. No SDK, no
+     * tracking script, no iframe. Direct-mode hrefs are rawurlencode()'d; logged-mode hrefs
+     * are `/s/{network}/{type}/{id}` and ShareRedirectController does the network-URL
+     * construction after recording the click.
      *
-     * The optional Web Share button is progressive enhancement: it is hidden by default and
-     * only revealed by the inline script when navigator.share exists. That script carries the
+     * The optional Web Share button is progressive enhancement: hidden by default, revealed
+     * by the inline script only when navigator.share exists. That script carries the
      * per-request CSP nonce (Vite::cspNonce(), set by SecurityHeaders before the view renders).
      */
     $u = rawurlencode($url);
     $t = rawurlencode($title);
     $s = rawurlencode($summary);
 
-    $links = [
+    $direct = [
         'Facebook' => "https://www.facebook.com/sharer/sharer.php?u={$u}",
         'X' => "https://twitter.com/intent/tweet?url={$u}&text={$t}",
         'LinkedIn' => "https://www.linkedin.com/sharing/share-offsite/?url={$u}",
@@ -27,6 +31,15 @@
         'Reddit' => "https://www.reddit.com/submit?url={$u}&title={$t}",
         'Email' => "mailto:?subject={$t}&body={$s}%0A%0A{$u}",
     ];
+
+    $logged = $shareType !== null && $shareId !== null;
+
+    $links = [];
+    foreach ($direct as $network => $href) {
+        $links[$network] = $logged
+            ? url('/s/' . \Illuminate\Support\Str::lower($network) . '/' . $shareType . '/' . $shareId)
+            : $href;
+    }
 
     $nonce = \Illuminate\Support\Facades\Vite::cspNonce();
 @endphp

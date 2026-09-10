@@ -40,6 +40,17 @@
             <div class="text-body text-foreground [&>*+*]:mt-4">
                 {!! $article->body !!}
             </div>
+
+            {{-- E2-T3 — every button routes through /s/{network}/article/{id} (ShareRedirectController)
+                 which logs one share_clicks row and then 302s to the network's own share endpoint. --}}
+            <x-share-links
+                class="mt-8 border-t border-border pt-6"
+                :url="route('blog.show', $article->slug)"
+                :title="$article->title"
+                :summary="$article->excerpt"
+                share-type="article"
+                :share-id="$article->id"
+            />
         </article>
     </div>
 </x-layouts::app>

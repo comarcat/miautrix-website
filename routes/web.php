@@ -10,6 +10,7 @@ use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\MediaController;
 use App\Http\Controllers\Public\ProjectController;
 use App\Http\Controllers\Public\ResumeController;
+use App\Http\Controllers\Public\ShareRedirectController;
 use App\Http\Controllers\Public\SitemapController;
 use App\Http\Controllers\Public\SkillsController;
 use App\Http\Controllers\Public\ThemeController;
@@ -45,6 +46,12 @@ Route::middleware('cache.public')->group(function (): void {
 });
 Route::get('/feed.xml', [BlogController::class, 'feed'])->name('feed');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
+
+// Phase 2 (E2-T3) — first-party click-logging share redirect. Deliberately OUTSIDE
+// cache.public: it must record one share_clicks row on every hit, then 302 to the network.
+Route::get('/s/{network}/{type}/{id}', ShareRedirectController::class)
+    ->whereNumber('id')
+    ->name('share.redirect');
 
 // BUG FIXED (found investigating a secscanner.app report): /contact used to sit inside the
 // cache.public group above, directly contradicting that group's own comment ("EXCEPT ... and
