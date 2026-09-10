@@ -4,6 +4,7 @@ namespace Tests\Feature\Phase2;
 
 use App\Models\ShareClick;
 use Carbon\CarbonInterface;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -13,6 +14,8 @@ use Tests\TestCase;
  */
 class ShareClickSchemaTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_the_table_has_the_append_only_column_set(): void
     {
         $this->assertTrue(Schema::hasTable('share_clicks'));

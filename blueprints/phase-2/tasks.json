@@ -308,7 +308,7 @@
    "app/Support/Seo/OgImage.php",
    "tests/Feature/Phase2/OgImageAbsoluteTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E2-T5",

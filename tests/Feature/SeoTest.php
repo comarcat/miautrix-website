@@ -6,6 +6,7 @@ use App\Models\Article;
 use App\Models\Profile;
 use App\Models\Project;
 use App\Models\User;
+use App\Support\Seo\OgImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -53,7 +54,9 @@ class SeoTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('<link rel="canonical" href="' . route('projects.show', $project->slug) . '">', false);
-        $response->assertSee('<meta property="og:image" content="' . asset('images/og-default.png') . '">', false);
+        // E2-T4: og:image is now always an absolute https URL, the og-default.png fallback included.
+        $response->assertSee('<meta property="og:image" content="' . OgImage::resolve(null) . '">', false);
+        $this->assertStringStartsWith('https://', OgImage::resolve(null));
         $response->assertSee('"@type":"CreativeWork"', false);
     }
 
