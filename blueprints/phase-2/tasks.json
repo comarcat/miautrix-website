@@ -253,7 +253,7 @@
    "resources/views/components/share-links.blade.php",
    "tests/Feature/Phase2/ShareLinksComponentTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E2-T3",
