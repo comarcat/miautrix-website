@@ -100,4 +100,14 @@ class InvalidatePublicPageCache
     {
         $this->__invoke('skills');
     }
+
+    /**
+     * Phase 2 (E2-T8) — a SocialProfileGroup only affects the /connect page (its heading,
+     * intro and ordering), never the footer, so a group save/delete busts just that one
+     * entry rather than the whole forSocialProfiles() sweep.
+     */
+    public function forConnect(): void
+    {
+        $this->__invoke('connect');
+    }
 }

@@ -423,7 +423,7 @@
    "app/Observers/SocialProfileObserver.php",
    "tests/Feature/Phase2/ConnectGroupedTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E3-T1",

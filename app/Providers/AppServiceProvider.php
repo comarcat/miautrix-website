@@ -9,11 +9,13 @@ use App\Models\Setting;
 use App\Models\Skill;
 use App\Models\SkillCategory;
 use App\Models\SocialProfile;
+use App\Models\SocialProfileGroup;
 use App\Observers\ArticleObserver;
 use App\Observers\ProjectObserver;
 use App\Observers\SettingObserver;
 use App\Observers\SkillCategoryObserver;
 use App\Observers\SkillObserver;
+use App\Observers\SocialProfileGroupObserver;
 use App\Observers\SocialProfileObserver;
 use App\Support\Analytics\NullAnalyticsProvider;
 use Carbon\CarbonImmutable;
@@ -88,6 +90,11 @@ class AppServiceProvider extends ServiceProvider
         // busts every one of those cache entries on any SocialProfile save/delete (see
         // SocialProfileObserver's own docblock).
         SocialProfile::observe(SocialProfileObserver::class);
+
+        // Phase 2 (E2-T8) — the /connect page renders one section per SocialProfileGroup;
+        // a group's heading/intro/order edit must bust that cached page (see
+        // SocialProfileGroupObserver's own docblock).
+        SocialProfileGroup::observe(SocialProfileGroupObserver::class);
 
         // Found in review: a new/edited Skill (or its category) never appeared on the
         // public /skills page — that page had no observer at all, same gap as the others
