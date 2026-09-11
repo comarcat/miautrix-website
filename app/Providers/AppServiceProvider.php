@@ -20,6 +20,7 @@ use App\Observers\SocialProfileGroupObserver;
 use App\Observers\SocialProfileObserver;
 use App\Observers\ThemeObserver;
 use App\Support\Analytics\NullAnalyticsProvider;
+use App\Support\Mail\ConfiguresMailFromSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -108,6 +109,12 @@ class AppServiceProvider extends ServiceProvider
         // window, or which row is default; every public page can render differently, so
         // ThemeObserver busts the whole public-page cache (see its own docblock).
         Theme::observe(ThemeObserver::class);
+
+        // Phase 2 (E5-T1) — makes the admin-configurable SMTP settings take effect for
+        // every mailer call this request/command makes (see its own docblock for the
+        // settings-table-may-not-exist-yet guard — this runs on every boot, migrate
+        // included).
+        app(ConfiguresMailFromSettings::class)->configure();
     }
 
     /**
