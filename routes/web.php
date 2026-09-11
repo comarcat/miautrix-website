@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Public\AboutController;
+use App\Http\Controllers\Public\ArticlePdfController;
 use App\Http\Controllers\Public\BlogController;
 use App\Http\Controllers\Public\ConnectController;
 use App\Http\Controllers\Public\DocumentDownloadController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Public\ExperienceController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\MediaController;
 use App\Http\Controllers\Public\ProjectController;
+use App\Http\Controllers\Public\ProjectPdfController;
 use App\Http\Controllers\Public\ResumeController;
 use App\Http\Controllers\Public\ShareRedirectController;
 use App\Http\Controllers\Public\SitemapController;
@@ -52,6 +54,11 @@ Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 Route::get('/s/{network}/{type}/{id}', ShareRedirectController::class)
     ->whereNumber('id')
     ->name('share.redirect');
+
+// Phase 2 (E4-T2) — real PDF exports. OUTSIDE cache.public: a binary body must never enter
+// the HTML page cache. Each controller 404s an unpublished entity.
+Route::get('/projects/{slug}/pdf', ProjectPdfController::class)->name('projects.pdf');
+Route::get('/blog/{slug}/pdf', ArticlePdfController::class)->name('blog.pdf');
 
 // BUG FIXED (found investigating a secscanner.app report): /contact used to sit inside the
 // cache.public group above, directly contradicting that group's own comment ("EXCEPT ... and

@@ -740,7 +740,7 @@
    "tests/Feature/Phase2/PdfDownloadTest.php",
    "resources/views/public/blog/show.blade.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E4-T3",

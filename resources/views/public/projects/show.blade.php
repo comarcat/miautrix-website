@@ -38,6 +38,8 @@
                 @if ($project->live_url)
                     <x-button :href="$project->live_url" variant="primary" size="sm">Live site</x-button>
                 @endif
+                {{-- E4-T2 — real PDF export (routes/web.php, outside cache.public). --}}
+                <x-button :href="route('projects.pdf', $project->slug)" variant="outline" size="sm">Download PDF</x-button>
             </div>
         </section>
 

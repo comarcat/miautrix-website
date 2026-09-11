@@ -27,6 +27,11 @@
             </p>
             <h1 class="text-display text-foreground">{{ $article->title }}</h1>
 
+            {{-- E4-T2 — real PDF export (routes/web.php, outside cache.public). --}}
+            <div>
+                <x-button :href="route('blog.pdf', $article->slug)" variant="outline" size="sm">Download PDF</x-button>
+            </div>
+
             {{-- The RichEditor body is already-sanitized HTML produced by Filament's own
                  Tiptap editor (E3-T6) — no raw user input ever reaches this page.
                  [&>*+*]:mt-4 spaces block elements without needing the (uninstalled)
