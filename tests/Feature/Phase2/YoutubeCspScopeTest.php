@@ -18,8 +18,12 @@ class YoutubeCspScopeTest extends TestCase
     use RefreshDatabase;
     use TogglesSiteFlags;
 
+    // Both nonce placeholders below are the SAME value on a real response — script-src's own
+    // 'nonce-%s' term was added alongside style-src's own (see SecurityHeaders' docblock:
+    // 'self' never covers an inline <script>, so nav-menu's/share-links' own inline scripts
+    // were unconditionally CSP-blocked before this).
     private const PRE_PHASE2_PUBLIC_CSP = "default-src 'self'; "
-        . "script-src 'self' 'unsafe-eval'; "
+        . "script-src 'self' 'unsafe-eval' 'nonce-%s'; "
         . "style-src 'self' 'nonce-%s'; "
         . "font-src 'self'; "
         . "img-src 'self' data:; "

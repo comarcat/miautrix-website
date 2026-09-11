@@ -45,9 +45,18 @@ class HeadersTest extends TestCase
         // shipped a real production regression: submitting the contact form threw "Livewire
         // Expression Error: ... 'unsafe-eval' is not an allowed source ... Expression:
         // 'submit'" and silently did nothing. 'unsafe-inline' is NOT required on script-src
-        // (no inline <script> on the public site needs it) — only Filament's admin panel
-        // needs that (see SecurityHeaders::PANEL_CSP's own docblock).
-        $this->assertStringContainsString("script-src 'self' 'unsafe-eval';", $csp);
+        // (only Filament's admin panel needs that — see SecurityHeaders::PANEL_CSP's own
+        // docblock).
+        //
+        // BUG FIXED (found live after the Phase 2 deploy): script-src never carried a nonce
+        // at all — 'self' only covers a same-origin <script src="...">, never an inline
+        // <script>...</script> block, so nav-menu.blade.php's and share-links.blade.php's own
+        // inline scripts were CSP-blocked unconditionally regardless of their nonce attribute.
+        // A prior version of this test asserted the exact literal "script-src 'self'
+        // 'unsafe-eval';" (nothing else), which is exactly the gap that shipped — this now
+        // requires a nonce term to be present too, the same way the style-src assertion below
+        // always has.
+        $this->assertMatchesRegularExpression("/script-src 'self' 'unsafe-eval' 'nonce-[^']+';/", $csp);
         $this->assertStringNotContainsString("script-src 'self' 'unsafe-eval' 'unsafe-inline'", $csp);
         $this->assertStringContainsString("object-src 'none'", $csp);
         // Regression test for a follow-up secscanner.app scan that still flagged CSP
@@ -56,6 +65,12 @@ class HeadersTest extends TestCase
         // docblock. A nonce must be present and NOT the literal 'unsafe-inline' string.
         $this->assertMatchesRegularExpression("/style-src 'self' 'nonce-[^']+';/", $csp);
         $this->assertStringNotContainsString('unsafe-inline', $csp);
+
+        // The nonce in script-src and style-src must be the SAME value — both come from the
+        // one per-request Vite::useCspNonce() call.
+        preg_match("/script-src 'self' 'unsafe-eval' 'nonce-([^']+)';/", $csp, $scriptMatch);
+        preg_match("/style-src 'self' 'nonce-([^']+)';/", $csp, $styleMatch);
+        $this->assertSame($scriptMatch[1], $styleMatch[1]);
     }
 
     public function test_the_admin_panel_is_told_not_to_be_indexed(): void

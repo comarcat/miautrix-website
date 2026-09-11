@@ -107,9 +107,20 @@ class SecurityHeaders
      */
     public const NONCE_PLACEHOLDER = '{{__csp_nonce__}}';
 
+    /**
+     * BUG FIXED (found live after the Phase 2 deploy, the real root cause behind the nav-menu
+     * and theme-token bugs — the nonce-vs-cache mismatch fixed elsewhere in this class was a
+     * real but secondary problem): script-src never carried a 'nonce-%s' term at all, only
+     * style-src did — 'self' covers a same-origin *file* (a <script src="...">), never an
+     * inline <script>...</script> block, so nav-menu.blade.php's and share-links.blade.php's
+     * own inline scripts were CSP-blocked unconditionally from the moment E3-T8/E2-T2 shipped
+     * them, regardless of whether their nonce attribute happened to match anything — there was
+     * no nonce source in script-src for any nonce, correct or not, to match against. Both
+     * directives now carry the same per-request nonce.
+     */
     private const PUBLIC_CSP_TEMPLATE = "default-src 'self'; "
-        . "script-src 'self' 'unsafe-eval'; "
-        . "style-src 'self' 'nonce-%s'; "
+        . "script-src 'self' 'unsafe-eval' 'nonce-%1\$s'; "
+        . "style-src 'self' 'nonce-%1\$s'; "
         . "font-src 'self'; "
         . "img-src 'self' data:; "
         . "connect-src 'self'; "
