@@ -1,6 +1,6 @@
 <x-filament-panels::page>
     {{-- BUG FIXED (found live, reported as "mail configuration is empty"): this view used to
-         be a bare skeleton ({{-- Page content --}} and nothing else) that never rendered the
+         be a bare skeleton (a placeholder comment and nothing else) that never rendered the
          form schema at all — MailSettings::form()/mount()/save() all existed and worked
          (covered by MailSettingsTest), the page itself just never displayed them, so every
          visit showed a blank page under the "Mail settings" title with only the header's

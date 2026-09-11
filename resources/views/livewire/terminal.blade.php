@@ -2,7 +2,7 @@
     x-data="{ open: @entangle('open') }"
     class="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pb-4"
 >
-    <div class="w-full max-w-2xl">
+    <div class="w-full max-w-4xl">
         <div class="flex justify-center">
             <button
                 type="button"
@@ -20,7 +20,19 @@
             x-transition
             class="flex h-56 flex-col rounded-card border border-border bg-card p-3 font-mono text-mono text-foreground shadow-elevation-2"
         >
-            <div class="flex-1 overflow-y-auto whitespace-pre-wrap" aria-live="polite">
+            {{-- BUG FIXED (found live: "should move to the last line created like a real
+                 terminal"): new output used to just append below the fold with no auto-scroll,
+                 so a real terminal user had to manually scroll down to see their own command's
+                 result. $wire.history is Livewire's Alpine-reactive view of the history
+                 property; touching it inside x-effect re-runs the effect on every change
+                 (including this one loading, which is harmless — it just scrolls to whatever
+                 is already at the bottom), then $nextTick waits for the new <div> lines to
+                 actually be in the DOM before measuring scrollHeight. --}}
+            <div
+                x-ref="output"
+                x-effect="$wire.history; $nextTick(() => $refs.output.scrollTop = $refs.output.scrollHeight)"
+                class="flex-1 overflow-y-auto whitespace-pre-wrap" aria-live="polite"
+            >
                 @foreach ($history as $line)
                     <div>{{ $line }}</div>
                 @endforeach

@@ -89,7 +89,14 @@
             {{-- E3-T8 — flat nav replaced by the desktop-style menubar (Work/Writing
                  submenus, About/Connect/Contact direct). The theme switcher rides along
                  inside the component. --}}
-            <nav aria-label="Primary" class="flex-1 basis-full md:basis-auto">
+            {{-- BUG FIXED (found live: menu no longer right-aligned): flex-1 made this element
+                 grow to fill all remaining space in the header row, and since nothing inside
+                 it re-aligns its own content to the far edge, the menu ended up sitting at the
+                 LEFT edge of that now-wide box instead of at the header's right edge, where
+                 justify-between used to put it when nav only ever took its natural content
+                 width. basis-full alone already forces the mobile wrap (a 100% flex-basis
+                 can't share a row with the logo); no flex-grow needed for that. --}}
+            <nav aria-label="Primary" class="basis-full md:basis-auto">
                 <x-nav-menu :theme="$theme ?? 'technical'" />
             </nav>
         </div>
