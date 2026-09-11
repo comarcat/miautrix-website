@@ -47,8 +47,10 @@ return [
 
     'csp' => [
         // The `/life*`-scoped YouTube frame-src / i.ytimg.com img-src addition in
-        // SecurityHeaders. OFF: every route's CSP is exactly today's.
-        'youtube_on_life' => env('SITE_CSP_YOUTUBE_ON_LIFE', false),
+        // SecurityHeaders. ON as of E4-T9 (p2-step-34) — the click-to-play facade
+        // (youtube-embed.blade.php) and the Life blog it appears on (E4-T8) both exist.
+        // Set SITE_CSP_YOUTUBE_ON_LIFE=false to fall back to every route's pre-Phase-2 CSP.
+        'youtube_on_life' => env('SITE_CSP_YOUTUBE_ON_LIFE', true),
     ],
 
 ];

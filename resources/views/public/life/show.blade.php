@@ -29,8 +29,11 @@
             </p>
             <h1 class="text-display text-foreground">{{ $article->title }}</h1>
 
+            {{-- E4-T9 — [youtube:ID] shortcodes in the body expand to the click-to-play
+                 facade; the RichEditor schema has no <script> node, so expand() only ever
+                 substitutes a widget for a shortcode string. --}}
             <div class="text-body text-foreground [&>*+*]:mt-4">
-                {!! $article->body !!}
+                {!! \App\Support\Content\YoutubeShortcode::expand($article->body) !!}
             </div>
         </article>
     </div>

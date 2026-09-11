@@ -22,11 +22,12 @@ class SiteConfigTest extends TestCase
 {
     public function test_the_feature_flags_have_their_expected_defaults(): void
     {
-        // site.themes.dynamic was flipped on in E3-T9 (p2-step-25) once the whole Epic 03
-        // chain was live; the other two stay off until their epic's final task.
+        // site.themes.dynamic (E3-T9, p2-step-25) and site.csp.youtube_on_life (E4-T9,
+        // p2-step-34) are both on now that their epics shipped; analytics stays off until
+        // Epic 05's own final task.
         $this->assertTrue(config('site.themes.dynamic'));
         $this->assertFalse(config('site.analytics.record_page_views'));
-        $this->assertFalse(config('site.csp.youtube_on_life'));
+        $this->assertTrue(config('site.csp.youtube_on_life'));
     }
 
     public function test_canonical_host_defaults_to_the_literal_apex_and_honours_an_env_override(): void

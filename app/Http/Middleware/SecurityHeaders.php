@@ -143,7 +143,7 @@ class SecurityHeaders
 
         $response->headers->set(
             'Content-Security-Policy',
-            $isAdmin ? self::PANEL_CSP : sprintf(self::PUBLIC_CSP_TEMPLATE, $nonce),
+            $isAdmin ? self::PANEL_CSP : $this->publicCsp($request, $nonce),
         );
 
         // Found in review: robots.txt used to Disallow: /admin, which a secscanner.app scan
@@ -183,5 +183,28 @@ class SecurityHeaders
         }
 
         return $response;
+    }
+
+    /**
+     * Phase 2 (E4-T9, §9 step 34) — the click-to-play YouTube facade (youtube-embed.blade.php)
+     * only ever loads an iframe after a real user click, so every route's CSP stays byte-
+     * identical EXCEPT `/life*`: that's the only place a facade can appear at all (the Life
+     * blog, E4-T8), and only when the flag is on. `frame-src` is added (the base template has
+     * none, so default-src's implicit 'self' would otherwise block the iframe) and
+     * `https://i.ytimg.com` joins `img-src` for the click-to-play thumbnail.
+     */
+    private function publicCsp(Request $request, string $nonce): string
+    {
+        $csp = sprintf(self::PUBLIC_CSP_TEMPLATE, $nonce);
+
+        if (! config('site.csp.youtube_on_life') || ! $request->is('life*')) {
+            return $csp;
+        }
+
+        return str_replace(
+            "img-src 'self' data:; ",
+            "img-src 'self' data: https://i.ytimg.com; frame-src https://www.youtube-nocookie.com; ",
+            $csp,
+        );
     }
 }
