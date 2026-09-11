@@ -50,4 +50,18 @@ return [
         'to_address' => env('CONTACT_TO_ADDRESS'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | GitHub
+    |--------------------------------------------------------------------------
+    |
+    | Phase 2 (E5-T7) — app/Support/Github/RepoStats.php. Optional: an unauthenticated
+    | request to the public repos API works fine at a lower rate limit when this is unset.
+    |
+    */
+
+    'github' => [
+        'token' => env('GITHUB_TOKEN'),
+    ],
+
 ];

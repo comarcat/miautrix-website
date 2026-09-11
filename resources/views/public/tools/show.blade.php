@@ -37,5 +37,45 @@
                 </div>
             </section>
         @endif
+
+        {{-- E5-T7 — cached GitHub repo stats (backlog item 13.1). Reading $tool->repoStats
+             triggers RepoStats::for($tool) (subject to its own staleness guards), so this
+             section reflects whatever the last successful fetch stored even when the
+             GitHub request itself fails right now. --}}
+        @if ($tool->repo_url && str_contains($tool->repo_url, 'github.com'))
+            @php $stats = $tool->repoStats; @endphp
+            @if ($stats['fetched_at'])
+                <section class="flex flex-wrap gap-6 rounded-card border border-border bg-card p-4 font-mono text-mono text-muted-foreground">
+                    @if ($stats['stars'] !== null)
+                        <div class="flex flex-col">
+                            <span class="text-foreground">Stars</span>
+                            <span>{{ $stats['stars'] }}</span>
+                        </div>
+                    @endif
+                    @if ($stats['forks'] !== null)
+                        <div class="flex flex-col">
+                            <span class="text-foreground">Forks</span>
+                            <span>{{ $stats['forks'] }}</span>
+                        </div>
+                    @endif
+                    @if ($stats['language'])
+                        <div class="flex flex-col">
+                            <span class="text-foreground">Language</span>
+                            <span>{{ $stats['language'] }}</span>
+                        </div>
+                    @endif
+                    @if ($stats['license'])
+                        <div class="flex flex-col">
+                            <span class="text-foreground">License</span>
+                            <span>{{ $stats['license'] }}</span>
+                        </div>
+                    @endif
+                    <div class="flex flex-col">
+                        <span class="text-foreground">Last updated</span>
+                        <span>{{ $stats['fetched_at']->diffForHumans() }}</span>
+                    </div>
+                </section>
+            @endif
+        @endif
     </div>
 </x-layouts::app>
