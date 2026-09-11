@@ -679,7 +679,7 @@
    "config/site.php",
    "tests/Feature/Phase2/ThemesDynamicOnTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E4-T1",

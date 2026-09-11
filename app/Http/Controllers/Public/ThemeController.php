@@ -46,7 +46,10 @@ class ThemeController extends Controller
 
     private function themeRule(): Closure|In
     {
-        if (! config('site.themes.dynamic')) {
+        // Literal set when the flag is off, or when it is on but no theme rows exist yet
+        // (ThemeResolver degrades the same way) — so E3-T9's flag flip can't 400 every
+        // switch before ThemeSeeder has run.
+        if (! config('site.themes.dynamic') || Theme::query()->doesntExist()) {
             return Rule::in(['technical', 'matrix']);
         }
 

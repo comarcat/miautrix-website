@@ -32,9 +32,11 @@ return [
     */
 
     'themes' => [
-        // ThemeResolver / date-windowed event themes. OFF: ResolveTheme uses the
-        // pre-Phase-2 literal path (cookie === 'matrix' ? 'matrix' : 'technical').
-        'dynamic' => env('SITE_THEMES_DYNAMIC', false),
+        // ThemeResolver / date-windowed event themes. ON as of E3-T9 (p2-step-25) — the
+        // whole Epic 03 chain (schema, resolver, delegation, token injection, admin, host
+        // canonicalisation, menubar) is in place. Set SITE_THEMES_DYNAMIC=false to fall
+        // back to the pre-Phase-2 literal path (cookie === 'matrix' ? 'matrix' : 'technical').
+        'dynamic' => env('SITE_THEMES_DYNAMIC', true),
     ],
 
     'analytics' => [

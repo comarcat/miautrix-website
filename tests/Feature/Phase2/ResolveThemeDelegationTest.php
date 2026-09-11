@@ -30,6 +30,8 @@ class ResolveThemeDelegationTest extends TestCase
 
     public function test_flag_off_matrix_cookie_still_resolves_to_matrix(): void
     {
+        $this->withSiteFlag('site.themes.dynamic', false);
+
         $this->withCookie(ResolveTheme::COOKIE_NAME, 'matrix')
             ->get('/__test/themed-page')
             ->assertOk()
@@ -38,6 +40,8 @@ class ResolveThemeDelegationTest extends TestCase
 
     public function test_flag_off_unknown_cookie_resolves_to_technical(): void
     {
+        $this->withSiteFlag('site.themes.dynamic', false);
+
         $this->withCookie(ResolveTheme::COOKIE_NAME, 'winterfest')
             ->get('/__test/themed-page')
             ->assertOk()

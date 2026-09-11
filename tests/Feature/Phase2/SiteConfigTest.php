@@ -20,9 +20,11 @@ use Tests\TestCase;
  */
 class SiteConfigTest extends TestCase
 {
-    public function test_the_three_feature_flags_default_to_boolean_false(): void
+    public function test_the_feature_flags_have_their_expected_defaults(): void
     {
-        $this->assertFalse(config('site.themes.dynamic'));
+        // site.themes.dynamic was flipped on in E3-T9 (p2-step-25) once the whole Epic 03
+        // chain was live; the other two stay off until their epic's final task.
+        $this->assertTrue(config('site.themes.dynamic'));
         $this->assertFalse(config('site.analytics.record_page_views'));
         $this->assertFalse(config('site.csp.youtube_on_life'));
     }

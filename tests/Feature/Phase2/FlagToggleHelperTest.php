@@ -16,16 +16,16 @@ class FlagToggleHelperTest extends TestCase
 
     public function test_the_helper_turns_a_site_flag_on_for_the_current_test(): void
     {
-        $this->assertFalse(config('site.themes.dynamic'));
+        // Uses an off-by-default flag — themes.dynamic was flipped on in E3-T9.
+        $this->assertFalse(config('site.analytics.record_page_views'));
 
-        $this->withSiteFlag('site.themes.dynamic', true);
+        $this->withSiteFlag('site.analytics.record_page_views', true);
 
-        $this->assertTrue(config('site.themes.dynamic'));
+        $this->assertTrue(config('site.analytics.record_page_views'));
     }
 
     public function test_a_flag_toggled_in_another_test_does_not_leak_into_this_one(): void
     {
-        $this->assertFalse(config('site.themes.dynamic'));
         $this->assertFalse(config('site.analytics.record_page_views'));
         $this->assertFalse(config('site.csp.youtube_on_life'));
     }

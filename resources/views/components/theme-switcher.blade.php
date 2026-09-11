@@ -24,7 +24,13 @@
     With it OFF (the default and every pre-Phase-2 environment) the markup below is
     untouched.
 --}}
-@if (config('site.themes.dynamic'))
+@php
+    // Dynamic list only when the flag is ON *and* real theme rows exist — otherwise (a
+    // fresh DB before ThemeSeeder) fall through to the literal two-option switcher, matching
+    // ThemeResolver's own degradation.
+    $dynamicSwitcher = config('site.themes.dynamic') && \App\Models\Theme::query()->exists();
+@endphp
+@if ($dynamicSwitcher)
     @php
         $available = \App\Models\Theme::query()
             ->where('enabled', true)
