@@ -11,6 +11,7 @@ use App\Models\SkillCategory;
 use App\Models\SocialProfile;
 use App\Models\SocialProfileGroup;
 use App\Models\Theme;
+use App\Models\Tool;
 use App\Observers\ArticleObserver;
 use App\Observers\ProjectObserver;
 use App\Observers\SettingObserver;
@@ -19,6 +20,7 @@ use App\Observers\SkillObserver;
 use App\Observers\SocialProfileGroupObserver;
 use App\Observers\SocialProfileObserver;
 use App\Observers\ThemeObserver;
+use App\Observers\ToolObserver;
 use App\Support\Analytics\NullAnalyticsProvider;
 use App\Support\Mail\ConfiguresMailFromSettings;
 use Carbon\CarbonImmutable;
@@ -109,6 +111,10 @@ class AppServiceProvider extends ServiceProvider
         // window, or which row is default; every public page can render differently, so
         // ThemeObserver busts the whole public-page cache (see its own docblock).
         Theme::observe(ThemeObserver::class);
+
+        // Phase 2 (E5-T6) — a Tool save/delete busts the /tools index cache (see
+        // ToolObserver's own docblock).
+        Tool::observe(ToolObserver::class);
 
         // Phase 2 (E5-T1) — makes the admin-configurable SMTP settings take effect for
         // every mailer call this request/command makes (see its own docblock for the

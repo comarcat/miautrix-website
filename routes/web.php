@@ -18,6 +18,8 @@ use App\Http\Controllers\Public\ShareRedirectController;
 use App\Http\Controllers\Public\SitemapController;
 use App\Http\Controllers\Public\SkillsController;
 use App\Http\Controllers\Public\ThemeController;
+use App\Http\Controllers\Public\ToolController;
+use App\Http\Controllers\Public\ToolDownloadController;
 use App\Http\Controllers\Public\WhoamiController;
 use Illuminate\Support\Facades\Route;
 
@@ -54,6 +56,9 @@ Route::middleware('cache.public')->group(function (): void {
     // to cache alongside everything else in this group.
     Route::get('/life', [LifeController::class, 'index'])->name('life.index');
     Route::get('/life/{slug}', [LifeController::class, 'show'])->name('life.show');
+    // Phase 2 (E5-T6) — the "Tools" download section (backlog item 13).
+    Route::get('/tools', [ToolController::class, 'index'])->name('tools.index');
+    Route::get('/tools/{slug}', [ToolController::class, 'show'])->name('tools.show');
 });
 Route::get('/feed.xml', [BlogController::class, 'feed'])->name('feed');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
@@ -77,6 +82,10 @@ Route::get('/projects/{project}/files/{media}', ProjectFileDownloadController::c
 // Phase 2 (E5-T4) — the terminal widget's whoami payload (backlog item 4). OUTSIDE
 // cache.public: it must reflect the actual requester's own IP/UA on every hit.
 Route::get('/whoami', WhoamiController::class)->name('whoami.show');
+
+// Phase 2 (E5-T6) — the download itself. OUTSIDE cache.public: it must write one
+// tool_downloads row AND stream a binary body on every request.
+Route::get('/tools/{slug}/download', ToolDownloadController::class)->name('tools.download');
 
 // BUG FIXED (found investigating a secscanner.app report): /contact used to sit inside the
 // cache.public group above, directly contradicting that group's own comment ("EXCEPT ... and

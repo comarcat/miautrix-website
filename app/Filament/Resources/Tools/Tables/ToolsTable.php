@@ -1,0 +1,53 @@
+<?php
+
+namespace App\Filament\Resources\Tools\Tables;
+
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Table;
+
+class ToolsTable
+{
+    public static function configure(Table $table): Table
+    {
+        return $table
+            ->reorderable('sort_order')
+            ->defaultSort('sort_order')
+            ->columns([
+                TextColumn::make('title')
+                    ->searchable(),
+                TextColumn::make('version'),
+                IconColumn::make('published')
+                    ->boolean(),
+                TextColumn::make('downloads_count')
+                    ->counts('downloads')
+                    ->label('Downloads'),
+                TextColumn::make('repo_url')
+                    ->label('Repository')
+                    ->limit(30)
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('sort_order')
+                    ->numeric()
+                    ->sortable(),
+            ])
+            ->filters([
+                TrashedFilter::make(),
+            ])
+            ->recordActions([
+                EditAction::make(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
+                ]),
+            ]);
+    }
+}
