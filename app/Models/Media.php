@@ -57,6 +57,8 @@ class Media extends SpatieMedia
         ['table' => 'skills', 'column' => 'icon_media_id', 'publishedColumn' => null],
         // Same for social_profiles — no `published` gate of its own.
         ['table' => 'social_profiles', 'column' => 'icon_media_id', 'publishedColumn' => null],
+        // Phase 2 (E5-T5).
+        ['table' => 'tools', 'column' => 'tool_file_media_id', 'publishedColumn' => 'published'],
     ];
 
     protected static function booted(): void
