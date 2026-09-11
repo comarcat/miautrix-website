@@ -822,7 +822,7 @@
    "app/Models/Project.php",
    "tests/Unit/Phase2/ProjectMetricsAccessorTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E4-T6",
