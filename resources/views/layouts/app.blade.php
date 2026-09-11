@@ -73,7 +73,14 @@
     </a>
 
     <header class="border-b border-border">
-        <div class="mx-auto flex max-w-(--container-content) items-center justify-between px-4 py-4">
+        {{-- BUG FIXED (found live: "themes still not working," turned out to be a mobile-only
+             report): this row had no wrap, so on a narrow viewport the logo and the full
+             desktop-style menubar fought for the same line and visually overlapped each
+             other — the menubar itself was still there, just unreadable/unusable, and with
+             it the theme switcher docked inside x-nav-menu (see that component's own
+             hidden md:block wrapper, also fixed). flex-wrap lets the nav drop to its own row
+             instead of overlapping the logo. --}}
+        <div class="mx-auto flex max-w-(--container-content) flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-4">
             <a href="{{ route('home') }}" class="flex items-center gap-2 font-mono text-sm font-medium tracking-wide text-foreground">
                 <img src="{{ asset('images/brand/miautrix-logo.png') }}" alt="" class="h-8 w-8 object-contain">
                 <span>miautrix</span>
@@ -82,7 +89,7 @@
             {{-- E3-T8 — flat nav replaced by the desktop-style menubar (Work/Writing
                  submenus, About/Connect/Contact direct). The theme switcher rides along
                  inside the component. --}}
-            <nav aria-label="Primary">
+            <nav aria-label="Primary" class="flex-1 basis-full md:basis-auto">
                 <x-nav-menu :theme="$theme ?? 'technical'" />
             </nav>
         </div>

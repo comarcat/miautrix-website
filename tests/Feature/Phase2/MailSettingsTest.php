@@ -101,4 +101,25 @@ class MailSettingsTest extends TestCase
 
         $this->assertStringNotContainsString('super-secret-password', $html);
     }
+
+    /**
+     * Regression test for a real production bug found live after the Phase 2 deploy, reported
+     * as "the admin mail configuration is empty": the page's own Blade view
+     * (resources/views/filament/pages/mail-settings.blade.php) was a bare skeleton that never
+     * rendered {{ $this->form }} at all, so the "Mail settings" page showed nothing but its
+     * title and the "Send test email" header action — no form, no fields, nothing to fill in
+     * or save. Every other test in this file drives the Livewire component directly via
+     * Livewire::test(MailSettings::class), which never touches the page's own view file, so
+     * none of them could have caught this. This one requests the real page URL instead.
+     */
+    public function test_the_page_actually_renders_the_form_fields_not_just_the_component(): void
+    {
+        $response = $this->actingAs($this->superAdmin())->get(MailSettings::getUrl());
+
+        $response->assertOk();
+        $response->assertSee('wire:submit', false);
+        foreach (['host', 'port', 'username', 'password', 'encryption', 'from_address', 'from_name'] as $field) {
+            $response->assertSee('wire:model="data.' . $field . '"', false);
+        }
+    }
 }

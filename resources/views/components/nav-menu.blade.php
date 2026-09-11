@@ -14,6 +14,16 @@
      * open submenu, Esc to close and restore focus to the trigger, and a focus trap while a
      * submenu is open. All chrome is driven by the --menu-* custom properties, which both
      * theme blocks in app.css define.
+     *
+     * BUG FIXED (found live once the menu's underlying CSP/caching bugs were fixed and it
+     * became possible to actually click a submenu item): the trigger <li> used to carry
+     * @mouseleave="close(...)" to close the dropdown when the pointer left it. The <ul> is
+     * absolutely positioned mt-1 below the button and contributes nothing to the <li>'s own
+     * (normal-flow) box, so that margin gap is a real dead zone covered by neither the button
+     * nor the menu — moving the pointer from the button down into the dropdown crossed it and
+     * fired mouseleave before the pointer ever reached a menu item, closing the menu it was
+     * headed for. Removed; closing now happens on Escape (already handled), on toggling the
+     * trigger again, or via @click.outside on the root element.
      */
     // E4-T8 — the raw cookie/theme key isn't enough on its own (a disabled or out-of-window
     // event theme still resolves to the default elsewhere); this mirrors ThemeResolver's own
@@ -51,12 +61,13 @@
 <div
     x-data="navMenu()"
     @keydown.escape.stop="closeAll()"
+    @click.outside="closeAll()"
     {{ $attributes->merge(['class' => 'relative']) }}
 >
     <ul
         role="menubar"
         aria-label="Primary"
-        class="flex items-center gap-1 text-sm"
+        class="flex flex-wrap items-center gap-1 text-sm"
         x-ref="bar"
     >
         <li role="none">
@@ -68,7 +79,7 @@
 
         @foreach ($groups as $group => $items)
             @php $gid = Str::slug($group); @endphp
-            <li role="none" class="relative" @mouseleave="close('{{ $gid }}')">
+            <li role="none" class="relative">
                 <button
                     type="button"
                     role="menuitem"
@@ -120,7 +131,11 @@
         @endforeach
     </ul>
 
-    <div class="mt-0 hidden md:block">
+    {{-- BUG FIXED (found live, reported as "themes still not working" — a mobile-only report):
+         this was `hidden md:block`, so the theme switcher it wraps didn't render at all below
+         the md breakpoint. A mobile visitor had no way to switch themes whatsoever, not a
+         cosmetic issue. Visible at every width now. --}}
+    <div class="mt-1 md:mt-0">
         <x-theme-switcher :theme="$theme" />
     </div>
 </div>
