@@ -708,7 +708,7 @@
    "resources/views/pdf/article.blade.php",
    "tests/Feature/Phase2/PdfViewsRenderTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E4-T2",
