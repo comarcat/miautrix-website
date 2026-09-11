@@ -1309,7 +1309,7 @@
    "resources/views/public/endorsements.blade.php",
    "tests/Feature/Phase2/EndorsementsPageTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E6-T4",

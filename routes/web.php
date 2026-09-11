@@ -6,6 +6,7 @@ use App\Http\Controllers\Public\BlogController;
 use App\Http\Controllers\Public\ConnectController;
 use App\Http\Controllers\Public\DocumentDownloadController;
 use App\Http\Controllers\Public\DocumentPreviewController;
+use App\Http\Controllers\Public\EndorsementController;
 use App\Http\Controllers\Public\ExperienceController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\LifeController;
@@ -99,6 +100,18 @@ Route::get('/tools/{slug}/download', ToolDownloadController::class)->name('tools
 // <style> tag at all, leaving the form entirely inert client-side. Moved out here, its own
 // route, never cached.
 Route::view('/contact', 'public.contact')->name('contact');
+
+// Phase 2 (E6-T3) — professional area only (backlog item 15): no /life/endorsements route,
+// and <livewire:testimonial-form> never mounts under /life. Deliberately kept OUTSIDE
+// cache.public, deviating from the blueprint's literal "inside cache.public" text — this
+// mounts a live Livewire component exactly the way /contact's ContactForm does, and that
+// was moved out of cache.public for a real, severe bug (see the comment on /contact above):
+// caching freezes one visitor's CSRF token/wire:snapshot into the response for everyone
+// after them, and Livewire's own asset auto-injection runs AFTER cache.public would have
+// already cached the page, so a cached /endorsements could serve with the submission form
+// entirely inert. Both pages read live data anyway (approved testimonials can change at any
+// time), so there is no caching upside being given up here.
+Route::get('/endorsements', [EndorsementController::class, 'index'])->name('endorsements.index');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('dashboard', 'dashboard')->name('dashboard');
