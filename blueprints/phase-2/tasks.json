@@ -1036,7 +1036,7 @@
    "resources/views/layouts/app.blade.php",
    "tests/Feature/Phase2/TerminalWidgetTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E5-T4",

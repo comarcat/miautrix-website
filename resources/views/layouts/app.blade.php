@@ -98,5 +98,11 @@
             <x-footer-social-profiles />
         </div>
     </footer>
+
+    {{-- Phase 2 (E5-T3) — the "fun terminal-style command widget" (backlog item 4). This
+         layout renders the public site only (layouts/authenticated.blade.php + the Filament
+         panel's own shell cover /dashboard, settings, and /admin), so mounting it here is
+         what keeps it off every authenticated/admin surface. --}}
+    <livewire:terminal />
 </body>
 </html>
