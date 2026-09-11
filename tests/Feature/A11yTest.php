@@ -86,6 +86,8 @@ class A11yTest extends TestCase
             route('contact'),
             route('blog.index'),
             route('blog.show', $article->slug),
+            // Phase 2 (E6-T5) — mounts <livewire:testimonial-form>, the honeypot included.
+            route('endorsements.index'),
         ];
     }
 

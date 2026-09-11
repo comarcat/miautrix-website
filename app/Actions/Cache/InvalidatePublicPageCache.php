@@ -159,6 +159,19 @@ class InvalidatePublicPageCache
     }
 
     /**
+     * Phase 2 (E6-T5) — /endorsements itself is registered OUTSIDE cache.public (E6-T3,
+     * same reasoning as /contact: it mounts a live Livewire component), so in the current
+     * app this is a defensive no-op against a cache entry that can't actually exist yet.
+     * Kept anyway — TestimonialObserver calls it on every save/delete, exactly like every
+     * other content-change observer, so nothing regresses silently if /endorsements is ever
+     * moved back into the cached group.
+     */
+    public function forEndorsements(): void
+    {
+        $this->__invoke('endorsements');
+    }
+
+    /**
      * E3-T5 — a `themes` row save/delete can change how ANY public page renders (token
      * overrides, the active window, which row is default), so this is a deliberate full
      * sweep: every seeded theme × every known host (see hosts()) × every statically-known

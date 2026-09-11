@@ -10,6 +10,7 @@ use App\Models\Skill;
 use App\Models\SkillCategory;
 use App\Models\SocialProfile;
 use App\Models\SocialProfileGroup;
+use App\Models\Testimonial;
 use App\Models\Theme;
 use App\Models\Tool;
 use App\Observers\ArticleObserver;
@@ -19,6 +20,7 @@ use App\Observers\SkillCategoryObserver;
 use App\Observers\SkillObserver;
 use App\Observers\SocialProfileGroupObserver;
 use App\Observers\SocialProfileObserver;
+use App\Observers\TestimonialObserver;
 use App\Observers\ThemeObserver;
 use App\Observers\ToolObserver;
 use App\Support\Analytics\NullAnalyticsProvider;
@@ -115,6 +117,11 @@ class AppServiceProvider extends ServiceProvider
         // Phase 2 (E5-T6) — a Tool save/delete busts the /tools index cache (see
         // ToolObserver's own docblock).
         Tool::observe(ToolObserver::class);
+
+        // Phase 2 (E6-T5) — Approve/Reject are plain $record->update() calls, so this
+        // fires on both; busts the /endorsements cache entry (see its own docblock for why
+        // that's currently a defensive no-op — the route isn't cached).
+        Testimonial::observe(TestimonialObserver::class);
 
         // Phase 2 (E5-T1) — makes the admin-configurable SMTP settings take effect for
         // every mailer call this request/command makes (see its own docblock for the
