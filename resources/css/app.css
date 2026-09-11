@@ -103,6 +103,12 @@
     --on-destructive: #FFFFFF;
     --ring: #2563EB;
     --font-sans: 'Courier New', Courier, monospace;
+
+    /* E3-T8 — desktop menubar chrome (<x-nav-menu>). Defined in every theme block. */
+    --menu-bg: #FFFFFF;
+    --menu-border: #E4E4E7;
+    --menu-shadow: 0 4px 12px rgb(0 0 0 / 0.10);
+    --menu-highlight: #E8ECF0;
 }
 
 /* Theme A dark (prefers-color-scheme) — never applies once [data-theme="matrix"] is set;
@@ -126,6 +132,11 @@
         --destructive: #F87171;
         --on-destructive: #09090B;
         --ring: #60A5FA;
+
+        --menu-bg: #111113;
+        --menu-border: #27272A;
+        --menu-shadow: 0 4px 12px rgb(0 0 0 / 0.4);
+        --menu-highlight: #1C1C1F;
     }
 }
 
@@ -152,6 +163,18 @@
     --on-destructive: #FFFFFF;
     --ring: #00FF41;
     --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+
+    /* E3-T8 — desktop menubar chrome (<x-nav-menu>). */
+    --menu-bg: #0C130E;
+    --menu-border: #1F1F1F;
+    --menu-shadow: 0 0 8px rgb(0 255 65 / 0.15);
+    --menu-highlight: #181818;
+}
+
+/* E3-T8 — keep Alpine-cloaked submenus hidden before Alpine boots, independent of whether
+   Livewire's own [x-cloak] rule is on the page. */
+[x-cloak] {
+    display: none !important;
 }
 
 /* Self-hosted fonts (§7) — woff2 only, font-display: swap, weights actually used by the

@@ -42,6 +42,26 @@
     @endisset
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+    {{-- E3-T4 (§9 step 20) — special-event theme token overrides. Only when the dynamic
+         flag is on AND the active theme is not one of the two seed themes (technical/matrix
+         render entirely from app.css, unchanged). Values are hard-sanitised (no <>{};) and
+         keys are constrained to a CSS custom-property shape, so {!! !!} is safe here; the
+         block carries the per-request CSP nonce SecurityHeaders sets. --}}
+    @if (config('site.themes.dynamic') && ! in_array($theme ?? 'technical', ['technical', 'matrix'], true))
+        @php
+            $activeTheme = \App\Models\Theme::query()->where('key', $theme)->first();
+            $tokenCss = collect($activeTheme?->tokens ?? [])
+                ->filter(fn ($value, $key) => is_string($key)
+                    && preg_match('/^--[A-Za-z0-9-]+$/', $key) === 1
+                    && (is_string($value) || is_numeric($value)))
+                ->map(fn ($value, $key) => $key . ':' . preg_replace('/[<>{};]/', '', (string) $value))
+                ->implode(';');
+        @endphp
+        @if ($activeTheme)
+            <style nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">:root{ {!! $tokenCss !!} }</style>
+        @endif
+    @endif
 </head>
 <body class="min-h-screen bg-background text-foreground font-sans antialiased">
     <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-input focus:bg-primary focus:px-4 focus:py-2 focus:text-on-primary">
@@ -55,17 +75,11 @@
                 <span>miautrix</span>
             </a>
 
-            <nav aria-label="Primary" class="flex items-center gap-6 text-sm">
-                <a href="{{ route('home') }}" class="hover:text-accent-text">Home</a>
-                <a href="{{ route('about') }}" class="hover:text-accent-text">About</a>
-                <a href="{{ route('experience') }}" class="hover:text-accent-text">Experience</a>
-                <a href="{{ route('skills') }}" class="hover:text-accent-text">Skills</a>
-                <a href="{{ route('projects.index') }}" class="hover:text-accent-text">Projects</a>
-                <a href="{{ route('resume') }}" class="hover:text-accent-text">Resume</a>
-                <a href="{{ route('blog.index') }}" class="hover:text-accent-text">Blog</a>
-                <a href="{{ route('connect') }}" class="hover:text-accent-text">Connect</a>
-                <a href="{{ route('contact') }}" class="hover:text-accent-text">Contact</a>
-                <x-theme-switcher :theme="$theme ?? 'technical'" />
+            {{-- E3-T8 — flat nav replaced by the desktop-style menubar (Work/Writing
+                 submenus, About/Connect/Contact direct). The theme switcher rides along
+                 inside the component. --}}
+            <nav aria-label="Primary">
+                <x-nav-menu :theme="$theme ?? 'technical'" />
             </nav>
         </div>
     </header>
@@ -84,5 +98,11 @@
             <x-footer-social-profiles />
         </div>
     </footer>
+
+    {{-- Phase 2 (E5-T3) — the "fun terminal-style command widget" (backlog item 4). This
+         layout renders the public site only (layouts/authenticated.blade.php + the Filament
+         panel's own shell cover /dashboard, settings, and /admin), so mounting it here is
+         what keeps it off every authenticated/admin surface. --}}
+    <livewire:terminal />
 </body>
 </html>

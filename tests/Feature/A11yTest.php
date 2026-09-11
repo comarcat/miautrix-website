@@ -86,6 +86,8 @@ class A11yTest extends TestCase
             route('contact'),
             route('blog.index'),
             route('blog.show', $article->slug),
+            // Phase 2 (E6-T5) — mounts <livewire:testimonial-form>, the honeypot included.
+            route('endorsements.index'),
         ];
     }
 
@@ -104,6 +106,23 @@ class A11yTest extends TestCase
 
                 $this->assertStructurallySound($response->getContent(), "{$url} (theme={$theme})");
             }
+        }
+    }
+
+    /**
+     * E4-T8 — /life only resolves under a shows_life_blog theme (matrix, by default); swept
+     * separately from publishedRoutes() because it 404s under 'technical'.
+     */
+    public function test_the_life_blog_passes_the_structural_sweep_under_a_permitted_theme(): void
+    {
+        $this->seedPublishedContent();
+        $article = Article::factory()->create(['title' => 'A11y Life Post', 'slug' => 'a11y-life-post', 'channel' => 'life']);
+
+        foreach ([route('life.index'), route('life.show', $article->slug)] as $url) {
+            $response = $this->withCookie(ResolveTheme::COOKIE_NAME, 'matrix')->get($url);
+            $response->assertOk();
+
+            $this->assertStructurallySound($response->getContent(), "{$url} (theme=matrix)");
         }
     }
 

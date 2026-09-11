@@ -129,6 +129,16 @@ class SecurityHeaders
     private const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=(), '
         . 'usb=(), browsing-topics=(), attribution-reporting=()';
 
+    /**
+     * Phase 2 (E5-T4, §9 step 38) — the terminal widget's `whoami` command offers a real
+     * browser geolocation prompt (gps, client-side only — this app never receives coordinates
+     * server-side unless the visitor's own JS sends them). `(self)` allows that prompt only
+     * on this origin's own pages, never as a third-party embed. /admin keeps the blanket
+     * `geolocation=()` above — nothing in the panel ever needs it.
+     */
+    private const PERMISSIONS_POLICY_PUBLIC = 'camera=(), microphone=(), geolocation=(self), payment=(), '
+        . 'usb=(), browsing-topics=(), attribution-reporting=()';
+
     public function handle(Request $request, Closure $next): Response
     {
         // Generated before $next() runs so it's available to Vite's own @vite() output and
@@ -143,7 +153,7 @@ class SecurityHeaders
 
         $response->headers->set(
             'Content-Security-Policy',
-            $isAdmin ? self::PANEL_CSP : sprintf(self::PUBLIC_CSP_TEMPLATE, $nonce),
+            $isAdmin ? self::PANEL_CSP : $this->publicCsp($request, $nonce),
         );
 
         // Found in review: robots.txt used to Disallow: /admin, which a secscanner.app scan
@@ -153,13 +163,21 @@ class SecurityHeaders
         // added this — strictly better than either: it actively tells any crawler that does
         // reach /admin (by any other means) not to index what it finds, without publishing
         // the path anywhere at all.
-        if ($isAdmin) {
+        //
+        // Phase 2 (E1-T8): the staging environment (staging.miautrix.tech) is a full copy of
+        // production for the sponsor to review before a production promote — it must never
+        // land in a search index. On `staging` the same header goes on EVERY route, public
+        // ones included, not just /admin. `production` and `local` are untouched.
+        if ($isAdmin || app()->environment('staging')) {
             $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
         }
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
-        $response->headers->set('Permissions-Policy', self::PERMISSIONS_POLICY);
+        $response->headers->set(
+            'Permissions-Policy',
+            $isAdmin ? self::PERMISSIONS_POLICY : self::PERMISSIONS_POLICY_PUBLIC,
+        );
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
         $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
         $response->headers->set('Cross-Origin-Embedder-Policy', 'require-corp');
@@ -178,5 +196,28 @@ class SecurityHeaders
         }
 
         return $response;
+    }
+
+    /**
+     * Phase 2 (E4-T9, §9 step 34) — the click-to-play YouTube facade (youtube-embed.blade.php)
+     * only ever loads an iframe after a real user click, so every route's CSP stays byte-
+     * identical EXCEPT `/life*`: that's the only place a facade can appear at all (the Life
+     * blog, E4-T8), and only when the flag is on. `frame-src` is added (the base template has
+     * none, so default-src's implicit 'self' would otherwise block the iframe) and
+     * `https://i.ytimg.com` joins `img-src` for the click-to-play thumbnail.
+     */
+    private function publicCsp(Request $request, string $nonce): string
+    {
+        $csp = sprintf(self::PUBLIC_CSP_TEMPLATE, $nonce);
+
+        if (! config('site.csp.youtube_on_life') || ! $request->is('life*')) {
+            return $csp;
+        }
+
+        return str_replace(
+            "img-src 'self' data:; ",
+            "img-src 'self' data: https://i.ytimg.com; frame-src https://www.youtube-nocookie.com; ",
+            $csp,
+        );
     }
 }

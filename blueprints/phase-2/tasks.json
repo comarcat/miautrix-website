@@ -1,0 +1,1372 @@
+[
+ {
+  "id": "E1-T1",
+  "title": "Add config/site.php with canonical_host and three OFF feature flags",
+  "epic": "01-staging-foundation",
+  "dependencies": [],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `config('site.themes.dynamic')`, `config('site.analytics.record_page_views')` and `config('site.csp.youtube_on_life')` are read with no env override THE SYSTEM SHALL each return boolean false.",
+   "WHEN `CANONICAL_HOST` is set in the environment THE SYSTEM SHALL make `config('site.canonical_host')` return that value, otherwise the string `miautrix.tech`.",
+   "WHEN `tests/Feature/Phase2/SiteConfigTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/SiteConfigTest.php"
+  ],
+  "checkpoint": "p2-step-01-site-config",
+  "files": [
+   "config/site.php",
+   "tests/Feature/Phase2/SiteConfigTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E1-T2",
+  "title": "Add Phase-2 env keys to .env.example and a flag-toggle test helper",
+  "epic": "01-staging-foundation",
+  "dependencies": [
+   "E1-T1"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `.env.example` is parsed THE SYSTEM SHALL contain `CANONICAL_HOST`, `SITE_THEMES_DYNAMIC`, `SITE_ANALYTICS_RECORD_PAGE_VIEWS`, `SITE_CSP_YOUTUBE_ON_LIFE`, `GEOIP_DATABASE_PATH` and `GITHUB_TOKEN`, each with a blank or obviously-fake value.",
+   "WHEN a test calls the helper to set `site.themes.dynamic` true and then reads the config THE SYSTEM SHALL return true within that test only.",
+   "WHEN `tests/Feature/Phase2/FlagToggleHelperTest.php` runs THE SYSTEM SHALL report 2 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "grep -q '^CANONICAL_HOST=' .env.example",
+   "grep -q '^SITE_ANALYTICS_RECORD_PAGE_VIEWS=' .env.example",
+   "./vendor/bin/pest tests/Feature/Phase2/FlagToggleHelperTest.php"
+  ],
+  "checkpoint": "p2-step-02-env-and-flag-helpers",
+  "files": [
+   ".env.example",
+   "tests/Feature/Phase2/FlagToggleHelperTest.php",
+   "tests/Feature/Phase2/Concerns/TogglesSiteFlags.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E1-T3",
+  "title": "Add a styled errors/503.blade.php maintenance page with a JS countdown",
+  "epic": "01-staging-foundation",
+  "dependencies": [
+   "E1-T1"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `resources/views/errors/503.blade.php` is rendered THE SYSTEM SHALL produce a page with a visible \"We'll be back soon\" heading and an element carrying a `data-countdown` attribute.",
+   "WHEN the page is rendered with `prefers-reduced-motion` in mind THE SYSTEM SHALL still show a plain-text estimated return time that does not depend on JavaScript.",
+   "WHEN the page is rendered THE SYSTEM SHALL contain no inline `style=\"color:` attribute and no third-party asset URL."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "grep -q 'data-countdown' resources/views/errors/503.blade.php",
+   "! grep -q 'style=\"color:' resources/views/errors/503.blade.php"
+  ],
+  "checkpoint": "p2-step-03-maintenance-view",
+  "files": [
+   "resources/views/errors/503.blade.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E1-T4",
+  "title": "Wire the maintenance-page ETA/retry value the 503 view reads",
+  "epic": "01-staging-foundation",
+  "dependencies": [
+   "E1-T3"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN the 503 view renders with a `retry` value available THE SYSTEM SHALL render the countdown target as an ISO-8601 timestamp inside the `data-countdown` element.",
+   "WHEN no `retry`/ETA value is available THE SYSTEM SHALL render a static fallback message and no broken countdown.",
+   "WHEN `tests/Feature/Phase2/MaintenancePageTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/MaintenancePageTest.php"
+  ],
+  "checkpoint": "p2-step-04-maintenance-eta",
+  "files": [
+   "resources/views/errors/503.blade.php",
+   "tests/Feature/Phase2/MaintenancePageTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E1-T5",
+  "title": "Add infra/deploy-staging.sh as a parameter-swapped copy of deploy.sh",
+  "epic": "01-staging-foundation",
+  "dependencies": [
+   "E1-T1"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `bash -n infra/deploy-staging.sh` runs THE SYSTEM SHALL exit 0.",
+   "WHEN the script is inspected THE SYSTEM SHALL read `STAGING_SSH_HOST`, `STAGING_DEPLOY_PATH`, `STAGING_DEPLOY_USER`, `STAGING_DEPLOY_PORT` and `STAGING_APP_DOMAIN`, run the local gate before touching the server, and set `APP_ENV=staging` for the deployed release.",
+   "WHEN the script is inspected THE SYSTEM SHALL contain neither `migrate:fresh` nor `db:wipe`."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "bash -n infra/deploy-staging.sh",
+   "grep -q 'APP_ENV=staging' infra/deploy-staging.sh",
+   "grep -q 'STAGING_APP_DOMAIN' infra/deploy-staging.sh",
+   "! grep -qE 'migrate:fresh|db:wipe' infra/deploy-staging.sh"
+  ],
+  "checkpoint": "p2-step-05-deploy-staging-script",
+  "files": [
+   "infra/deploy-staging.sh"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E1-T6",
+  "title": "Add infra/provision-staging.md operator checklist and the host-parity harness",
+  "epic": "01-staging-foundation",
+  "dependencies": [
+   "E1-T5"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `infra/provision-staging.md` is read THE SYSTEM SHALL name the `staging.miautrix.tech` vhost, HTTP Basic auth, a dedicated staging database, the `APP_ENV=staging` noindex behaviour, and the exact Cloudflare apex-to-www 301 Redirect Rule text.",
+   "WHEN `bash -n infra/host-parity-check.sh` runs THE SYSTEM SHALL exit 0.",
+   "WHEN `infra/host-parity-check.sh` is inspected THE SYSTEM SHALL curl both `www.` and the apex host for each listed path and diff the responses after stripping the per-request nonce and CSRF token."
+  ],
+  "verify": [
+   "test -f infra/provision-staging.md",
+   "grep -qi 'basic auth' infra/provision-staging.md",
+   "grep -qi 'redirect rule' infra/provision-staging.md",
+   "bash -n infra/host-parity-check.sh"
+  ],
+  "checkpoint": "p2-step-06-staging-provision-checklist",
+  "files": [
+   "infra/provision-staging.md",
+   "infra/host-parity-check.sh"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E1-T7",
+  "title": "Add the staging branch trigger to ci.yml without changing the check name",
+  "epic": "01-staging-foundation",
+  "dependencies": [
+   "E1-T5"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `.github/workflows/ci.yml` is parsed as YAML THE SYSTEM SHALL be syntactically valid.",
+   "WHEN the workflow's `on.push.branches` list is read THE SYSTEM SHALL include `staging` alongside `main` and `develop`.",
+   "WHEN the workflow's job name is read THE SYSTEM SHALL still be exactly `ci`, unchanged, so branch protection's required check keeps matching."
+  ],
+  "verify": [
+   "php -r \"require 'vendor/autoload.php'; Symfony\\\\Component\\\\Yaml\\\\Yaml::parseFile('.github/workflows/ci.yml'); echo 'yaml-ok';\"",
+   "php -r \"require 'vendor/autoload.php'; \\$y = Symfony\\\\Component\\\\Yaml\\\\Yaml::parseFile('.github/workflows/ci.yml'); exit(in_array('staging', \\$y['on']['push']['branches'] ?? [], true) ? 0 : 1);\"",
+   "grep -qx '    name: ci' .github/workflows/ci.yml"
+  ],
+  "checkpoint": "p2-step-07-staging-branch-ci",
+  "files": [
+   ".github/workflows/ci.yml"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E1-T8",
+  "title": "Emit noindex headers when APP_ENV is staging",
+  "epic": "01-staging-foundation",
+  "dependencies": [
+   "E1-T7"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN a response is produced while `app()->environment('staging')` is true THE SYSTEM SHALL carry `X-Robots-Tag: noindex, nofollow`.",
+   "WHEN a response is produced while the environment is `production` THE SYSTEM SHALL NOT carry a staging `X-Robots-Tag` on a public route.",
+   "WHEN `tests/Feature/Phase2/StagingNoindexTest.php` runs THE SYSTEM SHALL report 2 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/StagingNoindexTest.php",
+   "./vendor/bin/pest tests/Feature/Security/HeadersTest.php"
+  ],
+  "checkpoint": "p2-step-08-staging-noindex",
+  "files": [
+   "app/Http/Middleware/SecurityHeaders.php",
+   "tests/Feature/Phase2/StagingNoindexTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E2-T1",
+  "title": "Add the share_clicks schema, ShareClick model and factory",
+  "epic": "02-reach-sharing",
+  "dependencies": [
+   "E1-T8"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `php artisan migrate` runs THE SYSTEM SHALL create a `share_clicks` table with `network`, `type`, `subject_id`, nullable `referrer`, nullable `ip` and `created_at`, and no `updated_at` column.",
+   "WHEN a `ShareClick` row is inserted through the model THE SYSTEM SHALL persist without touching an `updated_at` column.",
+   "WHEN `tests/Feature/Phase2/ShareClickSchemaTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "php artisan migrate",
+   "./vendor/bin/pest tests/Feature/Phase2/ShareClickSchemaTest.php"
+  ],
+  "checkpoint": "p2-step-09-share-clicks-schema",
+  "files": [
+   "app/Models/ShareClick.php",
+   "database/factories/ShareClickFactory.php",
+   "tests/Feature/Phase2/ShareClickSchemaTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E2-T2",
+  "title": "Add the x-share-links Blade component for six networks",
+  "epic": "02-reach-sharing",
+  "dependencies": [
+   "E2-T1"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `<x-share-links :url :title :summary />` is rendered THE SYSTEM SHALL emit exactly six share links, one each for Facebook, X, LinkedIn, WhatsApp, Reddit and email, with the url/title/summary parameters URL-encoded.",
+   "WHEN the component renders THE SYSTEM SHALL emit no external SDK script tag and any progressive-enhancement Web Share script SHALL carry the per-request CSP nonce.",
+   "WHEN `tests/Feature/Phase2/ShareLinksComponentTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/ShareLinksComponentTest.php"
+  ],
+  "checkpoint": "p2-step-10-share-links-component",
+  "files": [
+   "resources/views/components/share-links.blade.php",
+   "tests/Feature/Phase2/ShareLinksComponentTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E2-T3",
+  "title": "Add the GET /s/{network}/{type}/{id} logging redirect route",
+  "epic": "02-reach-sharing",
+  "dependencies": [
+   "E2-T2"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `GET /s/x/article/1` is requested for an existing article THE SYSTEM SHALL insert exactly one `share_clicks` row with `network='x'`, `type='article'`, `subject_id=1` and return a 302 whose `Location` host is `x.com` (or `twitter.com`).",
+   "WHEN `GET /s/{network}/{type}/{id}` is requested with an unknown `network` THE SYSTEM SHALL return 404 and write no `share_clicks` row.",
+   "WHEN a blog post detail page is rendered THE SYSTEM SHALL include the `<x-share-links>` component pointing at `/s/...` redirect URLs.",
+   "WHEN `tests/Feature/Phase2/ShareRedirectTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/ShareRedirectTest.php"
+  ],
+  "checkpoint": "p2-step-11-share-redirect-route",
+  "files": [
+   "app/Http/Controllers/Public/ShareRedirectController.php",
+   "routes/web.php",
+   "resources/views/public/blog/show.blade.php",
+   "tests/Feature/Phase2/ShareRedirectTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E2-T4",
+  "title": "Make OgImage::resolve return an absolute URL and guarantee og_image_id",
+  "epic": "02-reach-sharing",
+  "dependencies": [
+   "E1-T8"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `OgImage::resolve()` is called with a media id or with null THE SYSTEM SHALL return an absolute `https://` URL, never a scheme-relative or path-only string.",
+   "WHEN a blog post and a project are rendered THE SYSTEM SHALL each emit a `<meta property=\"og:image\">` whose content is an absolute `https://` URL to an existing image.",
+   "WHEN `php artisan migrate` runs THE SYSTEM SHALL ensure both `articles` and `projects` have a nullable `og_image_id` foreign key to `media` (added only if absent).",
+   "WHEN `tests/Feature/Phase2/OgImageAbsoluteTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "php artisan migrate",
+   "./vendor/bin/pest tests/Feature/Phase2/OgImageAbsoluteTest.php"
+  ],
+  "checkpoint": "p2-step-12-ogimage-absolute",
+  "files": [
+   "app/Support/Seo/OgImage.php",
+   "tests/Feature/Phase2/OgImageAbsoluteTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E2-T5",
+  "title": "Serve OG images to unauthenticated crawlers for published entities",
+  "epic": "02-reach-sharing",
+  "dependencies": [
+   "E2-T4"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN an unauthenticated `GET /media/{media}/{filename}` request targets media referenced as the OG image of a published article or project THE SYSTEM SHALL return 200 with an image content type.",
+   "WHEN the same request targets media of an unpublished entity THE SYSTEM SHALL return 404.",
+   "WHEN `infra/provision-staging.md` is read THE SYSTEM SHALL document the Cloudflare configuration that exempts OG image URLs from bot-fight-mode.",
+   "WHEN `tests/Feature/Phase2/OgImageCrawlerAccessTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "grep -qi 'bot' infra/provision-staging.md",
+   "./vendor/bin/pest tests/Feature/Phase2/OgImageCrawlerAccessTest.php"
+  ],
+  "checkpoint": "p2-step-13-ogimage-crawler-access",
+  "files": [
+   "app/Http/Controllers/Public/MediaController.php",
+   "infra/provision-staging.md",
+   "tests/Feature/Phase2/OgImageCrawlerAccessTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E2-T6",
+  "title": "Add the social_profile_groups schema and social_profiles.group_id FK",
+  "epic": "02-reach-sharing",
+  "dependencies": [
+   "E1-T8"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `php artisan migrate` runs THE SYSTEM SHALL create `social_profile_groups` with `name`, `heading`, nullable `intro_text`, `sort_order` and timestamps, and add a nullable `group_id` foreign key on `social_profiles` with `nullOnDelete`.",
+   "WHEN a `SocialProfileGroup` is deleted THE SYSTEM SHALL set `group_id` to null on its member `social_profiles`, never delete them.",
+   "WHEN `tests/Feature/Phase2/SocialGroupSchemaTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "php artisan migrate",
+   "./vendor/bin/pest tests/Feature/Phase2/SocialGroupSchemaTest.php"
+  ],
+  "checkpoint": "p2-step-14-social-groups-schema",
+  "files": [
+   "app/Models/SocialProfileGroup.php",
+   "app/Models/SocialProfile.php",
+   "database/factories/SocialProfileGroupFactory.php",
+   "tests/Feature/Phase2/SocialGroupSchemaTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E2-T7",
+  "title": "Add the Filament SocialProfileGroupResource and a grouped Select",
+  "epic": "02-reach-sharing",
+  "dependencies": [
+   "E2-T6"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN the authenticated super_admin opens the SocialProfileGroups index THE SYSTEM SHALL return 200 and allow reordering rows by `sort_order`.",
+   "WHEN editing a SocialProfile in Filament THE SYSTEM SHALL offer a `group_id` Select that can create a new group inline.",
+   "WHEN `tests/Feature/Phase2/SocialGroupResourceTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/SocialGroupResourceTest.php"
+  ],
+  "checkpoint": "p2-step-15-social-groups-admin",
+  "files": [
+   "app/Filament/Resources/SocialProfileGroups/SocialProfileGroupResource.php",
+   "app/Filament/Resources/SocialProfileGroups/Schemas/SocialProfileGroupForm.php",
+   "app/Filament/Resources/SocialProfiles/Schemas/SocialProfileForm.php",
+   "app/Policies/SocialProfileGroupPolicy.php",
+   "tests/Feature/Phase2/SocialGroupResourceTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E2-T8",
+  "title": "Render /connect as one section per group and bust its cache on change",
+  "epic": "02-reach-sharing",
+  "dependencies": [
+   "E2-T7"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `/connect` is requested with two groups and profiles across them THE SYSTEM SHALL render one section per group in `sort_order`, each showing the group's heading and intro paragraph, with grouped profiles nested correctly.",
+   "WHEN a profile has no `group_id` THE SYSTEM SHALL render it in a trailing \"Other\" section.",
+   "WHEN a `SocialProfileGroup` or `SocialProfile` is saved THE SYSTEM SHALL forget the `/connect` page cache entry for every seeded theme key.",
+   "WHEN the footer is rendered THE SYSTEM SHALL still show only `show_in_footer` profiles, unchanged by grouping.",
+   "WHEN `tests/Feature/Phase2/ConnectGroupedTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/ConnectGroupedTest.php"
+  ],
+  "checkpoint": "p2-step-16-connect-grouped-render",
+  "files": [
+   "app/Http/Controllers/Public/ConnectController.php",
+   "resources/views/public/connect.blade.php",
+   "app/Observers/SocialProfileGroupObserver.php",
+   "app/Observers/SocialProfileObserver.php",
+   "tests/Feature/Phase2/ConnectGroupedTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E3-T1",
+  "title": "Add the themes schema, Theme model and seeded technical/matrix rows",
+  "epic": "03-theming-navigation",
+  "dependencies": [
+   "E2-T8"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `php artisan migrate` runs THE SYSTEM SHALL create a `themes` table with a unique `key`, `name`, json `tokens`, `is_default`, `enabled`, nullable `active_from`, nullable `active_until`, `shows_life_blog` defaulting false, and `sort_order`.",
+   "WHEN `php artisan db:seed --class=ThemeSeeder` runs THE SYSTEM SHALL create exactly one `themes` row with `is_default=true` (`technical`) and a `matrix` row with `shows_life_blog=true`, both `enabled` and both with `tokens` equal to `{}` — and SHALL require no `ADMIN_SEED_*` env vars.",
+   "WHEN a second `Theme` is saved with `is_default=true` THE SYSTEM SHALL demote the previously-default row so exactly one remains default.",
+   "WHEN `tests/Feature/Phase2/ThemeSchemaTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "php artisan migrate",
+   "php artisan db:seed --class=ThemeSeeder",
+   "./vendor/bin/pest tests/Feature/Phase2/ThemeSchemaTest.php"
+  ],
+  "checkpoint": "p2-step-17-themes-schema",
+  "files": [
+   "app/Models/Theme.php",
+   "database/seeders/ThemeSeeder.php",
+   "database/seeders/DatabaseSeeder.php",
+   "database/factories/ThemeFactory.php",
+   "tests/Feature/Phase2/ThemeSchemaTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E3-T2",
+  "title": "Add the ThemeResolver service",
+  "epic": "03-theming-navigation",
+  "dependencies": [
+   "E3-T1"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `ThemeResolver` is given a cookie value naming an enabled theme whose active window contains today THE SYSTEM SHALL return that theme.",
+   "WHEN the named theme is disabled, outside its active window, or unknown THE SYSTEM SHALL return the `is_default` theme.",
+   "WHEN no cookie is present THE SYSTEM SHALL return the `is_default` theme.",
+   "WHEN `tests/Unit/Phase2/ThemeResolverTest.php` runs THE SYSTEM SHALL report 5 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Unit/Phase2/ThemeResolverTest.php"
+  ],
+  "checkpoint": "p2-step-18-theme-resolver",
+  "files": [
+   "app/Support/Theming/ThemeResolver.php",
+   "tests/Unit/Phase2/ThemeResolverTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E3-T3",
+  "title": "Delegate ResolveTheme to ThemeResolver behind the dynamic-themes flag",
+  "epic": "03-theming-navigation",
+  "dependencies": [
+   "E3-T2"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `config('site.themes.dynamic')` is false THE SYSTEM SHALL resolve the theme by the pre-Phase-2 literal path (`matrix` only when the cookie equals `matrix`, otherwise `technical`), byte-identical to before.",
+   "WHEN `config('site.themes.dynamic')` is true THE SYSTEM SHALL resolve the theme via `ThemeResolver` and share the resolved key as `$theme`.",
+   "WHEN `tests/Feature/Phase2/ResolveThemeDelegationTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/ResolveThemeDelegationTest.php",
+   "./vendor/bin/pest tests/Feature/Theme/ThemeSwitchTest.php"
+  ],
+  "checkpoint": "p2-step-19-resolve-theme-delegation",
+  "files": [
+   "app/Http/Middleware/ResolveTheme.php",
+   "tests/Feature/Phase2/ResolveThemeDelegationTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E3-T4",
+  "title": "Inject a nonce'd token style block and tighten ThemeController validation",
+  "epic": "03-theming-navigation",
+  "dependencies": [
+   "E3-T3"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN the active theme is neither `technical` nor `matrix` and the dynamic flag is on THE SYSTEM SHALL emit one `<style>` block carrying the per-request CSP nonce and the theme's `tokens` as `:root` custom properties.",
+   "WHEN the active theme is `technical` or `matrix` THE SYSTEM SHALL emit no such `<style>` block and render from `app.css` unchanged.",
+   "WHEN `POST /theme` receives a theme key that is not an enabled, currently-active theme THE SYSTEM SHALL reject it with a validation error.",
+   "WHEN the switcher partial renders THE SYSTEM SHALL list only currently-active enabled themes.",
+   "WHEN `tests/Feature/Phase2/ThemeTokenInjectionTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/ThemeTokenInjectionTest.php"
+  ],
+  "checkpoint": "p2-step-20-theme-token-injection",
+  "files": [
+   "resources/views/layouts/app.blade.php",
+   "app/Http/Controllers/Public/ThemeController.php",
+   "resources/views/components/theme-switcher.blade.php",
+   "tests/Feature/Phase2/ThemeTokenInjectionTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E3-T5",
+  "title": "Add the Filament ThemeResource and a cache-busting ThemeObserver",
+  "epic": "03-theming-navigation",
+  "dependencies": [
+   "E3-T4"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN the super_admin creates a theme in Filament with a KeyValue `tokens` map, date pickers and a `shows_life_blog` toggle THE SYSTEM SHALL persist all of them.",
+   "WHEN any `Theme` row is saved or deleted THE SYSTEM SHALL forget every public-page cache entry (all themes, all known public paths).",
+   "WHEN `tests/Feature/Phase2/ThemeResourceTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/ThemeResourceTest.php"
+  ],
+  "checkpoint": "p2-step-21-theme-admin",
+  "files": [
+   "app/Filament/Resources/Themes/ThemeResource.php",
+   "app/Filament/Resources/Themes/Schemas/ThemeForm.php",
+   "app/Observers/ThemeObserver.php",
+   "app/Actions/Cache/InvalidatePublicPageCache.php",
+   "tests/Feature/Phase2/ThemeResourceTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E3-T6",
+  "title": "Add a host segment to the public page-cache key",
+  "epic": "03-theming-navigation",
+  "dependencies": [
+   "E3-T5"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `CachePublicPage::keyFor()` is called THE SYSTEM SHALL return `public-page:{host}:{theme}:{path}` where `{host}` is the request host, preserving the existing `{theme}:{path}` tail for every current route.",
+   "WHEN the same path is requested with `Host: www.miautrix.tech` and with `Host: miautrix.tech` THE SYSTEM SHALL compute two different cache keys, so neither host can serve the other's cached HTML.",
+   "WHEN `InvalidatePublicPageCache` forgets an entry THE SYSTEM SHALL forget it for every known host as well as every seeded theme.",
+   "WHEN `tests/Feature/Phase2/CacheKeyHostSegmentTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/CacheKeyHostSegmentTest.php",
+   "./vendor/bin/pest tests/Feature/Cache/PageCacheTest.php"
+  ],
+  "checkpoint": "p2-step-22-cache-key-host-segment",
+  "files": [
+   "app/Actions/Cache/CachePublicPage.php",
+   "app/Actions/Cache/InvalidatePublicPageCache.php",
+   "tests/Feature/Phase2/CacheKeyHostSegmentTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E3-T7",
+  "title": "Canonicalise the host: cookie domain, canonical link, Cloudflare rule text",
+  "epic": "03-theming-navigation",
+  "dependencies": [
+   "E3-T6"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN the app is requested with `Host: www.miautrix.tech` and with `Host: miautrix.tech` and the same `miautrix_theme` cookie THE SYSTEM SHALL resolve to the identical theme on both.",
+   "WHEN any public page renders on either host THE SYSTEM SHALL emit a `<link rel=\"canonical\">` whose host equals `config('site.canonical_host')`.",
+   "WHEN the theme cookie is set THE SYSTEM SHALL scope it to a `.`-prefixed registrable domain of `config('site.canonical_host')` so it is shared across both hosts.",
+   "WHEN `infra/provision-staging.md` is read THE SYSTEM SHALL contain the exact Cloudflare 301 Redirect Rule text for the non-canonical host.",
+   "WHEN `tests/Feature/Phase2/CanonicalHostTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "grep -qi 'redirect rule' infra/provision-staging.md",
+   "./vendor/bin/pest tests/Feature/Phase2/CanonicalHostTest.php"
+  ],
+  "checkpoint": "p2-step-23-canonical-host",
+  "files": [
+   "config/session.php",
+   "resources/views/layouts/app.blade.php",
+   "infra/provision-staging.md",
+   "tests/Feature/Phase2/CanonicalHostTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E3-T8",
+  "title": "Add the x-nav-menu desktop menubar with per-theme tokens",
+  "epic": "03-theming-navigation",
+  "dependencies": [
+   "E3-T7"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN the layout renders THE SYSTEM SHALL use `<x-nav-menu>` carrying `role=\"menubar\"`, `role=\"menu\"` and `role=\"menuitem\"` and expose every Phase-1 public destination (Work, Writing, About, Connect, Contact groups) as a reachable menu item.",
+   "WHEN a submenu is open and `Escape` is pressed THE SYSTEM SHALL close it and return focus to its trigger, with focus trapped inside the submenu while open.",
+   "WHEN the menu is styled THE SYSTEM SHALL use only `--menu-*` custom properties defined in both the `:root`/Console block and the `[data-theme=\"matrix\"]` block of `app.css`, with those keys also listed in the documented `themes.tokens` set.",
+   "WHEN `tests/Feature/Phase2/NavMenuA11yTest.php` and the Phase-1 `tests/Feature/A11yTest.php` run THE SYSTEM SHALL each exit 0 with zero violations."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/NavMenuA11yTest.php",
+   "./vendor/bin/pest tests/Feature/A11yTest.php"
+  ],
+  "checkpoint": "p2-step-24-nav-menu",
+  "files": [
+   "resources/views/components/nav-menu.blade.php",
+   "resources/views/layouts/app.blade.php",
+   "resources/css/app.css",
+   "tests/Feature/Phase2/NavMenuA11yTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E3-T9",
+  "title": "Turn the dynamic-themes flag on",
+  "epic": "03-theming-navigation",
+  "dependencies": [
+   "E3-T8"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `config('site.themes.dynamic')` reads its default THE SYSTEM SHALL return true, and the seeded `technical` and `matrix` themes SHALL still resolve to their pre-Phase-2 rendered output.",
+   "WHEN a theme has `active_from` in the future THE SYSTEM SHALL NOT offer it in the switcher and SHALL NOT resolve to it; a theme active now with `enabled=true` SHALL be offered and resolvable.",
+   "WHEN a theme row is saved through the admin THE SYSTEM SHALL bust every public page's cache entry for both theme variants.",
+   "WHEN `tests/Feature/Phase2/ThemesDynamicOnTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/ThemesDynamicOnTest.php"
+  ],
+  "checkpoint": "p2-step-25-themes-dynamic-on",
+  "files": [
+   "config/site.php",
+   "tests/Feature/Phase2/ThemesDynamicOnTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E4-T1",
+  "title": "Install barryvdh/laravel-dompdf and add the two print Blade views",
+  "epic": "04-content-portfolio",
+  "dependencies": [
+   "E3-T9"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `composer require barryvdh/laravel-dompdf:^3.1` runs THE SYSTEM SHALL exit 0 and `config/dompdf.php` SHALL be published.",
+   "WHEN `resources/views/pdf/project.blade.php` and `resources/views/pdf/article.blade.php` are rendered THE SYSTEM SHALL produce HTML with only inline `<style>` CSS and no external `<link>` or `<script>` element.",
+   "WHEN `tests/Feature/Phase2/PdfViewsRenderTest.php` runs THE SYSTEM SHALL report 2 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "composer require barryvdh/laravel-dompdf:^3.1 --no-interaction",
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/PdfViewsRenderTest.php"
+  ],
+  "checkpoint": "p2-step-26-dompdf-install-views",
+  "files": [
+   "composer.json",
+   "config/dompdf.php",
+   "resources/views/pdf/project.blade.php",
+   "resources/views/pdf/article.blade.php",
+   "tests/Feature/Phase2/PdfViewsRenderTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E4-T2",
+  "title": "Add the project and blog PDF download routes and buttons",
+  "epic": "04-content-portfolio",
+  "dependencies": [
+   "E4-T1"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `GET /projects/{slug}/pdf` is requested for a published project THE SYSTEM SHALL return 200 with `Content-Type: application/pdf` and a non-empty body.",
+   "WHEN `GET /blog/{slug}/pdf` is requested for a published article THE SYSTEM SHALL return 200 with `Content-Type: application/pdf` and a non-empty body.",
+   "WHEN either PDF route is requested for an unpublished entity THE SYSTEM SHALL return 404.",
+   "WHEN the route table is inspected THE SYSTEM SHALL show neither PDF route inside the `cache.public` middleware group.",
+   "WHEN `tests/Feature/Phase2/PdfDownloadTest.php` runs THE SYSTEM SHALL report 5 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/PdfDownloadTest.php"
+  ],
+  "checkpoint": "p2-step-27-pdf-routes",
+  "files": [
+   "app/Http/Controllers/Public/ProjectPdfController.php",
+   "app/Http/Controllers/Public/ArticlePdfController.php",
+   "routes/web.php",
+   "resources/views/public/projects/show.blade.php",
+   "tests/Feature/Phase2/PdfDownloadTest.php",
+   "resources/views/public/blog/show.blade.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E4-T3",
+  "title": "Add a project_files media collection and its Filament upload field",
+  "epic": "04-content-portfolio",
+  "dependencies": [
+   "E3-T9"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN a super_admin uploads a PDF or ZIP to a project's Files field in Filament THE SYSTEM SHALL store it in the `project_files` media collection on the `private-media` disk with a generated filename.",
+   "WHEN an SVG is uploaded to that field THE SYSTEM SHALL reject it with a validation error and store nothing.",
+   "WHEN `tests/Feature/Phase2/ProjectFilesUploadTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/ProjectFilesUploadTest.php"
+  ],
+  "checkpoint": "p2-step-28-project-files-collection",
+  "files": [
+   "app/Models/Project.php",
+   "app/Filament/Resources/Projects/Schemas/ProjectForm.php",
+   "tests/Feature/Phase2/ProjectFilesUploadTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E4-T4",
+  "title": "Render project files publicly with a published-state download controller",
+  "epic": "04-content-portfolio",
+  "dependencies": [
+   "E4-T3"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN a published project has a file in `project_files` THE SYSTEM SHALL render a \"Files\" list on its public detail page with a working download link.",
+   "WHEN `GET /projects/{project}/files/{media}` targets a file of an unpublished project THE SYSTEM SHALL return 404.",
+   "WHEN the download link is followed for a published project THE SYSTEM SHALL stream the stored file with a `Content-Disposition: attachment` header.",
+   "WHEN `tests/Feature/Phase2/ProjectFilesPublicTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/ProjectFilesPublicTest.php"
+  ],
+  "checkpoint": "p2-step-29-project-files-public",
+  "files": [
+   "app/Http/Controllers/Public/ProjectFileDownloadController.php",
+   "routes/web.php",
+   "resources/views/public/projects/show.blade.php",
+   "tests/Feature/Phase2/ProjectFilesPublicTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E4-T5",
+  "title": "Add nullable delivery-metrics columns and null-safe Project accessors",
+  "epic": "04-content-portfolio",
+  "dependencies": [
+   "E3-T9"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `php artisan migrate` runs THE SYSTEM SHALL add nullable `budget_planned`, `budget_actual`, `planned_start`, `planned_end`, `actual_start`, `actual_end`, `team_size`, `role` and `outcome` columns to `projects`.",
+   "WHEN `schedulePerformancePct`, `budgetPerformancePct`, `isOnTime` or `isOnBudget` is read on a project missing the inputs it needs THE SYSTEM SHALL return null, never throw.",
+   "WHEN all inputs are present THE SYSTEM SHALL compute the percentages from planned vs actual values, not from a stored column.",
+   "WHEN `tests/Unit/Phase2/ProjectMetricsAccessorTest.php` runs THE SYSTEM SHALL report 5 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "php artisan migrate",
+   "./vendor/bin/pest tests/Unit/Phase2/ProjectMetricsAccessorTest.php"
+  ],
+  "checkpoint": "p2-step-30-delivery-metrics-schema",
+  "files": [
+   "app/Models/Project.php",
+   "tests/Unit/Phase2/ProjectMetricsAccessorTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E4-T6",
+  "title": "Add the delivery-metrics admin section, public stat strip and card badge",
+  "epic": "04-content-portfolio",
+  "dependencies": [
+   "E4-T5"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN a project has one or more delivery metrics set THE SYSTEM SHALL render a stat strip on its public detail page; WHEN it has none THE SYSTEM SHALL render neither the strip nor a placeholder.",
+   "WHEN a project's `isOnTime` and `isOnBudget` are both true THE SYSTEM SHALL render an \"On time · On budget\" badge on its card; otherwise no badge.",
+   "WHEN the stat strip renders a percentage THE SYSTEM SHALL show the value computed from planned/actual, matching the model accessor.",
+   "WHEN `tests/Feature/Phase2/DeliveryMetricsUiTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/DeliveryMetricsUiTest.php"
+  ],
+  "checkpoint": "p2-step-31-delivery-metrics-ui",
+  "files": [
+   "app/Filament/Resources/Projects/Schemas/ProjectForm.php",
+   "resources/views/public/projects/show.blade.php",
+   "resources/views/components/project-card.blade.php",
+   "tests/Feature/Phase2/DeliveryMetricsUiTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E4-T7",
+  "title": "Add the article channel column, scopes, admin filter and professional-only feed",
+  "epic": "04-content-portfolio",
+  "dependencies": [
+   "E3-T9"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `php artisan migrate` runs THE SYSTEM SHALL add a non-null `channel` column to `articles` defaulting to `professional`, with an index.",
+   "WHEN `Article::professional()` or `Article::life()` is queried THE SYSTEM SHALL return only rows whose `channel` matches.",
+   "WHEN `/feed.xml` is requested THE SYSTEM SHALL contain no article whose `channel` is `life`, and `/blog` SHALL be unaffected by the new column.",
+   "WHEN the ArticleResource table is used THE SYSTEM SHALL offer a `channel` Select on the form and a `channel` filter on the table.",
+   "WHEN `tests/Feature/Phase2/ArticleChannelTest.php` runs THE SYSTEM SHALL report 5 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "php artisan migrate",
+   "./vendor/bin/pest tests/Feature/Phase2/ArticleChannelTest.php",
+   "./vendor/bin/pest tests/Feature/Public/BlogFeedTest.php"
+  ],
+  "checkpoint": "p2-step-32-article-channel",
+  "files": [
+   "app/Models/Article.php",
+   "app/Filament/Resources/Articles/Schemas/ArticleForm.php",
+   "app/Filament/Resources/Articles/Tables/ArticlesTable.php",
+   "tests/Feature/Phase2/ArticleChannelTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E4-T8",
+  "title": "Add the theme-gated /life blog routes, nav entry and cache invalidation",
+  "epic": "04-content-portfolio",
+  "dependencies": [
+   "E2-T4",
+   "E4-T7"
+  ],
+  "priority": "p0",
+  "acceptance": [
+   "WHEN `/life` is requested under a theme whose `shows_life_blog` is true THE SYSTEM SHALL return 200 and list only published `channel='life'` articles.",
+   "WHEN `/life` or `/life/{slug}` is requested under a theme whose `shows_life_blog` is false THE SYSTEM SHALL return 404.",
+   "WHEN the nav is rendered THE SYSTEM SHALL show a \"Life\" entry only under a `shows_life_blog` theme and hide it otherwise.",
+   "WHEN a `channel='life'` article is published or unpublished THE SYSTEM SHALL forget the `/life` and `/life/{slug}` cache entries for every seeded theme key.",
+   "WHEN `tests/Feature/Phase2/LifeBlogVisibilityTest.php` runs THE SYSTEM SHALL report 5 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/LifeBlogVisibilityTest.php",
+   "./vendor/bin/pest tests/Feature/A11yTest.php"
+  ],
+  "checkpoint": "p2-step-33-life-blog-routes",
+  "files": [
+   "app/Http/Controllers/Public/LifeController.php",
+   "routes/web.php",
+   "resources/views/public/life/index.blade.php",
+   "app/Actions/Cache/InvalidatePublicPageCache.php",
+   "tests/Feature/Phase2/LifeBlogVisibilityTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E4-T9",
+  "title": "Add the lazy YouTube facade with a /life-scoped CSP and turn the flag on",
+  "epic": "04-content-portfolio",
+  "dependencies": [
+   "E4-T8"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN a Life post containing a `[youtube:ID]` shortcode is rendered THE SYSTEM SHALL emit a click-to-play facade (thumbnail plus a real play `<button>`) and no `<iframe>` in the initial HTML.",
+   "WHEN `config('site.csp.youtube_on_life')` is true and the request path matches `life*` THE SYSTEM SHALL add `frame-src https://www.youtube-nocookie.com` and `https://i.ytimg.com` to `img-src` in the public CSP.",
+   "WHEN the request path is `/blog/*` or `/` THE SYSTEM SHALL send a `Content-Security-Policy` byte-identical to its pre-Phase-2 value with no YouTube sources.",
+   "WHEN `config('site.csp.youtube_on_life')` reads its default THE SYSTEM SHALL return true.",
+   "WHEN `tests/Feature/Phase2/YoutubeCspScopeTest.php` runs THE SYSTEM SHALL report 5 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/YoutubeCspScopeTest.php",
+   "./vendor/bin/pest tests/Feature/Security/HeadersTest.php"
+  ],
+  "checkpoint": "p2-step-34-youtube-embed-and-flag",
+  "files": [
+   "resources/views/components/youtube-embed.blade.php",
+   "app/Http/Middleware/SecurityHeaders.php",
+   "config/site.php",
+   "tests/Feature/Phase2/YoutubeCspScopeTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E5-T1",
+  "title": "Add admin-configurable SMTP with an encrypted store and a send-test action",
+  "epic": "05-platform-analytics",
+  "dependencies": [
+   "E4-T9"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN mail settings are saved through the Filament \"Mail settings\" Page THE SYSTEM SHALL persist host, port, username, encryption, from-address and from-name, and store the password with an `encrypted` cast.",
+   "WHEN the framework boots with mail settings present THE SYSTEM SHALL make `config('mail.mailers.smtp.host')` and the from-address reflect the saved values, falling back to `.env` when no settings exist.",
+   "WHEN the \"Send test email\" header action is triggered THE SYSTEM SHALL dispatch a `TestMail` to the configured from-address and flash a success or failure message, never echoing the stored password.",
+   "WHEN `tests/Feature/Phase2/MailSettingsTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/MailSettingsTest.php"
+  ],
+  "checkpoint": "p2-step-35-admin-smtp",
+  "files": [
+   "app/Support/Mail/ConfiguresMailFromSettings.php",
+   "app/Filament/Pages/MailSettings.php",
+   "app/Mail/TestMail.php",
+   "app/Providers/AppServiceProvider.php",
+   "tests/Feature/Phase2/MailSettingsTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E5-T2",
+  "title": "Install geoip2/geoip2 and add a null-safe GeoLocator service",
+  "epic": "05-platform-analytics",
+  "dependencies": [
+   "E4-T9"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `composer require geoip2/geoip2:^3.4` runs THE SYSTEM SHALL exit 0 and `config/geoip.php` SHALL define a `database_path` defaulting to `storage/app/geoip/GeoLite2-City.mmdb` and overridable by `GEOIP_DATABASE_PATH`.",
+   "WHEN `GeoLocator` is asked for country, region, city or ISP and the `.mmdb` file is absent THE SYSTEM SHALL return null for each and never throw.",
+   "WHEN `.gitignore` is inspected THE SYSTEM SHALL exclude `storage/app/geoip/`.",
+   "WHEN `tests/Unit/Phase2/GeoLocatorTest.php` runs with no `.mmdb` present THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "composer require geoip2/geoip2:^3.4 --no-interaction",
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "git check-ignore -q storage/app/geoip/GeoLite2-City.mmdb; test $? -eq 0",
+   "./vendor/bin/pest tests/Unit/Phase2/GeoLocatorTest.php"
+  ],
+  "checkpoint": "p2-step-36-geolocator",
+  "files": [
+   "composer.json",
+   "config/geoip.php",
+   "app/Support/Geo/GeoLocator.php",
+   ".gitignore",
+   "tests/Unit/Phase2/GeoLocatorTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E5-T3",
+  "title": "Add the Livewire terminal command widget to public pages",
+  "epic": "05-platform-analytics",
+  "dependencies": [
+   "E4-T9"
+  ],
+  "priority": "p2",
+  "acceptance": [
+   "WHEN the `help` command is entered THE SYSTEM SHALL list `help`, `dir`/`ls`, `cd`, `whoami`, `clear` and `matrix`.",
+   "WHEN `cd projects` is entered THE SYSTEM SHALL issue a browser redirect to `/projects`.",
+   "WHEN `matrix` is entered THE SYSTEM SHALL set the `miautrix_theme` cookie to `matrix`.",
+   "WHEN an admin panel page is rendered THE SYSTEM SHALL NOT mount the terminal widget.",
+   "WHEN `tests/Feature/Phase2/TerminalWidgetTest.php` runs THE SYSTEM SHALL report 5 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/TerminalWidgetTest.php"
+  ],
+  "checkpoint": "p2-step-37-terminal-widget",
+  "files": [
+   "app/Livewire/Terminal.php",
+   "resources/views/livewire/terminal.blade.php",
+   "resources/views/layouts/app.blade.php",
+   "tests/Feature/Phase2/TerminalWidgetTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E5-T4",
+  "title": "Add the whoami payload endpoint and open geolocation on public routes",
+  "epic": "05-platform-analytics",
+  "dependencies": [
+   "E5-T2",
+   "E5-T3"
+  ],
+  "priority": "p2",
+  "acceptance": [
+   "WHEN `GET /whoami` is requested THE SYSTEM SHALL return a payload containing an `ip` key from the request IP and `isp`/`city`/`region`/`country` keys that are null when the GeoLite2 `.mmdb` is absent.",
+   "WHEN `GET /whoami` responds THE SYSTEM SHALL NOT include any `mac` key.",
+   "WHEN a public (non-admin) response is inspected THE SYSTEM SHALL send `Permissions-Policy` allowing `geolocation=(self)`; WHEN an `/admin` response is inspected it SHALL still send `geolocation=()`.",
+   "WHEN `tests/Feature/Phase2/WhoamiTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/WhoamiTest.php",
+   "./vendor/bin/pest tests/Feature/Security/HeadersTest.php"
+  ],
+  "checkpoint": "p2-step-38-whoami",
+  "files": [
+   "app/Http/Controllers/Public/WhoamiController.php",
+   "app/Http/Middleware/SecurityHeaders.php",
+   "routes/web.php",
+   "tests/Feature/Phase2/WhoamiTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E5-T5",
+  "title": "Add the tools and tool_downloads schema with their models",
+  "epic": "05-platform-analytics",
+  "dependencies": [
+   "E5-T2"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `php artisan migrate` runs THE SYSTEM SHALL create `tools` (title, unique `slug`, `summary`, `description`, `version`, `published`, `repo_url`, `sort_order`, soft deletes) and `tool_downloads` (tool_id FK `cascadeOnDelete`, nullable `ip`/`country`/`region`/`city`/`isp`/`referrer`/`user_agent`, `created_at` only).",
+   "WHEN a `Tool` is force-deleted THE SYSTEM SHALL cascade-delete its `tool_downloads`; WHEN it is soft-deleted THE SYSTEM SHALL keep them.",
+   "WHEN a file is attached to a `Tool` THE SYSTEM SHALL store it in the single-file `tool_file` media collection on the `private-media` disk.",
+   "WHEN `tests/Feature/Phase2/ToolSchemaTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "php artisan migrate",
+   "./vendor/bin/pest tests/Feature/Phase2/ToolSchemaTest.php"
+  ],
+  "checkpoint": "p2-step-39-tools-schema",
+  "files": [
+   "app/Models/Tool.php",
+   "app/Models/ToolDownload.php",
+   "database/factories/ToolFactory.php",
+   "database/factories/ToolDownloadFactory.php",
+   "tests/Feature/Phase2/ToolSchemaTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E5-T6",
+  "title": "Add the public Tools pages, logging download route and Filament resource",
+  "epic": "05-platform-analytics",
+  "dependencies": [
+   "E5-T5"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `/tools` is requested THE SYSTEM SHALL list only `published` tools; WHEN `/tools/{slug}` targets an unpublished tool THE SYSTEM SHALL return 404.",
+   "WHEN `GET /tools/{slug}/download` is requested for a published tool THE SYSTEM SHALL stream the `tool_file` and insert exactly one `tool_downloads` row carrying the request `ip` (geo fields null without the `.mmdb`).",
+   "WHEN a `Tool` is saved THE SYSTEM SHALL forget the `/tools` index cache entry for every seeded theme key, and the download route SHALL never be cached.",
+   "WHEN the super_admin opens the ToolResource THE SYSTEM SHALL show a CRUD table and a downloads breakdown (relation manager or stats widget).",
+   "WHEN `tests/Feature/Phase2/ToolsPublicAdminTest.php` runs THE SYSTEM SHALL report 5 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/ToolsPublicAdminTest.php"
+  ],
+  "checkpoint": "p2-step-40-tools-public-admin",
+  "files": [
+   "app/Http/Controllers/Public/ToolController.php",
+   "app/Http/Controllers/Public/ToolDownloadController.php",
+   "routes/web.php",
+   "app/Filament/Resources/Tools/ToolResource.php",
+   "tests/Feature/Phase2/ToolsPublicAdminTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E5-T7",
+  "title": "Add cached GitHub repo stats with a stored-column fallback",
+  "epic": "05-platform-analytics",
+  "dependencies": [
+   "E5-T6"
+  ],
+  "priority": "p2",
+  "acceptance": [
+   "WHEN `php artisan migrate` runs THE SYSTEM SHALL add nullable `gh_stars`, `gh_forks`, `gh_language`, `gh_license`, `gh_pushed_at` and `gh_fetched_at` columns to `tools`.",
+   "WHEN a tool with a github.com `repo_url` is viewed and its stats are stale (older than one hour or never fetched) THE SYSTEM SHALL fetch repo stats over HTTP, cache them for one hour, and persist them to the `gh_*` columns.",
+   "WHEN the same tool is viewed again within the hour THE SYSTEM SHALL NOT make a second HTTP request.",
+   "WHEN the GitHub request fails (for example returns 503) THE SYSTEM SHALL render the tool page using the last stored `gh_*` values and a staleness note, never a 5xx.",
+   "WHEN `tests/Feature/Phase2/RepoStatsTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "php artisan migrate",
+   "./vendor/bin/pest tests/Feature/Phase2/RepoStatsTest.php"
+  ],
+  "checkpoint": "p2-step-41-github-repo-stats",
+  "files": [
+   "app/Support/Github/RepoStats.php",
+   "app/Models/Tool.php",
+   "resources/views/public/tools/show.blade.php",
+   "tests/Feature/Phase2/RepoStatsTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E5-T8",
+  "title": "Add the page_views schema and the flag-gated RecordPageView middleware",
+  "epic": "05-platform-analytics",
+  "dependencies": [
+   "E5-T2"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `php artisan migrate` runs THE SYSTEM SHALL create `page_views` with `path`, nullable `referrer_host`, nullable `country`, nullable `device`, `channel` and `created_at` only.",
+   "WHEN `config('site.analytics.record_page_views')` is true and `GET /` is requested THE SYSTEM SHALL insert exactly one `page_views` row.",
+   "WHEN the flag is true and an `/admin/...` path, a non-GET request, an asset path, or a known bot user agent is seen THE SYSTEM SHALL insert zero rows and return before any database write.",
+   "WHEN the flag is false THE SYSTEM SHALL insert zero rows for any request.",
+   "WHEN `tests/Feature/Phase2/RecordPageViewTest.php` runs THE SYSTEM SHALL report 5 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "php artisan migrate",
+   "./vendor/bin/pest tests/Feature/Phase2/RecordPageViewTest.php"
+  ],
+  "checkpoint": "p2-step-42-page-views",
+  "files": [
+   "app/Http/Middleware/RecordPageView.php",
+   "bootstrap/app.php",
+   "database/factories/PageViewFactory.php",
+   "app/Models/PageView.php",
+   "tests/Feature/Phase2/RecordPageViewTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E5-T9",
+  "title": "Add the Filament Analytics dashboard and turn the page-view flag on",
+  "epic": "05-platform-analytics",
+  "dependencies": [
+   "E2-T3",
+   "E5-T7",
+   "E5-T8"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN the super_admin opens the Analytics Page with seeded `page_views`, `tool_downloads` and `share_clicks` rows THE SYSTEM SHALL render totals for views, downloads and share clicks that equal the seeded counts over the selected range.",
+   "WHEN the Analytics widgets render THE SYSTEM SHALL show top paths, referrer hosts, a country breakdown and a professional-vs-life split, all from first-party tables.",
+   "WHEN any Analytics or public page loads THE SYSTEM SHALL include no `<script>` whose src is a non-`'self'` origin.",
+   "WHEN `config('site.analytics.record_page_views')` reads its default THE SYSTEM SHALL return true.",
+   "WHEN `tests/Feature/Phase2/AnalyticsDashboardTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/AnalyticsDashboardTest.php"
+  ],
+  "checkpoint": "p2-step-43-analytics-dashboard-on",
+  "files": [
+   "app/Filament/Pages/Analytics.php",
+   "app/Filament/Widgets/AnalyticsOverviewWidget.php",
+   "app/Filament/Widgets/AnalyticsTopPathsWidget.php",
+   "config/site.php",
+   "tests/Feature/Phase2/AnalyticsDashboardTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E6-T1",
+  "title": "Add the testimonials schema, model, policy and factory",
+  "epic": "06-testimonials",
+  "dependencies": [
+   "E5-T9"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `php artisan migrate` runs THE SYSTEM SHALL create `testimonials` with `name`, nullable `organization`/`role`, `contact_type`, `contact_value`, `body`, `status` defaulting to `pending`, nullable `approved_at`, and a nullable `company_id` foreign key to `companies` with `nullOnDelete`.",
+   "WHEN a `Testimonial` is inserted without a status THE SYSTEM SHALL store `pending`.",
+   "WHEN a referenced `Company` is deleted THE SYSTEM SHALL set `company_id` to null and keep the testimonial.",
+   "WHEN `tests/Feature/Phase2/TestimonialSchemaTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "php artisan migrate",
+   "./vendor/bin/pest tests/Feature/Phase2/TestimonialSchemaTest.php"
+  ],
+  "checkpoint": "p2-step-44-testimonials-schema",
+  "files": [
+   "app/Models/Testimonial.php",
+   "app/Policies/TestimonialPolicy.php",
+   "database/factories/TestimonialFactory.php",
+   "tests/Feature/Phase2/TestimonialSchemaTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E6-T2",
+  "title": "Add the public testimonial submission Livewire form",
+  "epic": "06-testimonials",
+  "dependencies": [
+   "E6-T1"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN a valid endorsement is submitted THE SYSTEM SHALL create exactly one `testimonials` row with `status='pending'` and show a \"thanks, pending review\" message.",
+   "WHEN the honeypot field is filled THE SYSTEM SHALL discard the submission with no row written.",
+   "WHEN a sixth submission from the same IP within an hour is made THE SYSTEM SHALL reject it with a rate-limit message.",
+   "WHEN `contact_type` is `email` THE SYSTEM SHALL validate `contact_value` as an email, and as a URL for `linkedin`/`url`.",
+   "WHEN `tests/Feature/Phase2/TestimonialFormTest.php` runs THE SYSTEM SHALL report 5 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/TestimonialFormTest.php"
+  ],
+  "checkpoint": "p2-step-45-testimonial-form",
+  "files": [
+   "app/Livewire/TestimonialForm.php",
+   "resources/views/livewire/testimonial-form.blade.php",
+   "app/Mail/TestimonialSubmitted.php",
+   "tests/Feature/Phase2/TestimonialFormTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E6-T3",
+  "title": "Add the /endorsements page showing approved testimonials only",
+  "epic": "06-testimonials",
+  "dependencies": [
+   "E6-T2"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN `/endorsements` is requested THE SYSTEM SHALL render only `approved` testimonials, each with name, organization, role and a linked contact, plus the submission form.",
+   "WHEN a testimonial is `pending` or `rejected` THE SYSTEM SHALL never render it publicly.",
+   "WHEN the route table is inspected THE SYSTEM SHALL expose `/endorsements` in the professional area only, with no `/life/endorsements` route.",
+   "WHEN `tests/Feature/Phase2/EndorsementsPageTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "npm run build",
+   "./vendor/bin/pest tests/Feature/Phase2/EndorsementsPageTest.php"
+  ],
+  "checkpoint": "p2-step-46-endorsements-page",
+  "files": [
+   "app/Http/Controllers/Public/EndorsementController.php",
+   "routes/web.php",
+   "resources/views/public/endorsements.blade.php",
+   "tests/Feature/Phase2/EndorsementsPageTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E6-T4",
+  "title": "Add the Filament TestimonialResource with Approve and Reject actions",
+  "epic": "06-testimonials",
+  "dependencies": [
+   "E6-T3"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN the super_admin uses the Approve row action THE SYSTEM SHALL set `status='approved'` and `approved_at=now()`.",
+   "WHEN the Reject row action is used THE SYSTEM SHALL set `status='rejected'` and leave `approved_at` null.",
+   "WHEN the resource table is used THE SYSTEM SHALL filter rows by `status`.",
+   "WHEN the super_admin attempts to create a testimonial from the panel THE SYSTEM SHALL deny it (testimonials are created only by the public form).",
+   "WHEN `tests/Feature/Phase2/TestimonialResourceTest.php` runs THE SYSTEM SHALL report 4 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/TestimonialResourceTest.php"
+  ],
+  "checkpoint": "p2-step-47-testimonial-admin",
+  "files": [
+   "app/Filament/Resources/Testimonials/TestimonialResource.php",
+   "app/Filament/Resources/Testimonials/Tables/TestimonialsTable.php",
+   "app/Policies/TestimonialPolicy.php",
+   "tests/Feature/Phase2/TestimonialResourceTest.php"
+  ],
+  "status": "done"
+ },
+ {
+  "id": "E6-T5",
+  "title": "Bust the endorsements cache when a testimonial is approved",
+  "epic": "06-testimonials",
+  "dependencies": [
+   "E6-T4"
+  ],
+  "priority": "p1",
+  "acceptance": [
+   "WHEN a `Testimonial` is saved (including an Approve action) THE SYSTEM SHALL forget the `/endorsements` page cache entry for every seeded theme key.",
+   "WHEN a `pending` testimonial is approved THE SYSTEM SHALL cause it to appear on the next `/endorsements` request without a manual cache clear.",
+   "WHEN a `rejected` testimonial is saved THE SYSTEM SHALL still never render it on `/endorsements`.",
+   "WHEN `tests/Feature/Phase2/TestimonialCacheBustTest.php` runs THE SYSTEM SHALL report 3 passing tests, 0 skipped."
+  ],
+  "verify": [
+   "./vendor/bin/pint --test",
+   "./vendor/bin/phpstan analyse",
+   "./vendor/bin/pest tests/Feature/Phase2/TestimonialCacheBustTest.php",
+   "./vendor/bin/pest tests/Feature/A11yTest.php"
+  ],
+  "checkpoint": "p2-step-48-testimonial-cache-bust",
+  "files": [
+   "app/Observers/TestimonialObserver.php",
+   "app/Providers/AppServiceProvider.php",
+   "app/Actions/Cache/InvalidatePublicPageCache.php",
+   "tests/Feature/Phase2/TestimonialCacheBustTest.php"
+  ],
+  "status": "done"
+ }
+]

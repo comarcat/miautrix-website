@@ -27,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $og_title
  * @property string|null $og_description
  * @property int|null $og_image_id
+ * @property string $channel 'professional' (default) or 'life'
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
@@ -34,6 +35,14 @@ use Illuminate\Support\Carbon;
 class Article extends Model
 {
     use HasAutoSlug, HasFactory, SoftDeletes;
+
+    /**
+     * Phase 2 (E4-T7) — the only two channels a row may carry. `/feed.xml`
+     * (BlogController@feed) and /life (E4-T8's LifeController) each read one.
+     */
+    public const CHANNEL_PROFESSIONAL = 'professional';
+
+    public const CHANNEL_LIFE = 'life';
 
     protected $fillable = [
         'title',
@@ -50,6 +59,7 @@ class Article extends Model
         'og_title',
         'og_description',
         'og_image_id',
+        'channel',
     ];
 
     protected function casts(): array
@@ -68,6 +78,25 @@ class Article extends Model
     public function scopePublished(Builder $query): Builder
     {
         return $query->whereNotNull('published_at')->where('published_at', '<=', now());
+    }
+
+    /**
+     * Phase 2 (E4-T7) — filter by channel. `professional()`/`life()` are the two shorthands
+     * everything else (the feed, E4-T8's /life) actually calls.
+     */
+    public function scopeChannel(Builder $query, string $channel): Builder
+    {
+        return $query->where('channel', $channel);
+    }
+
+    public function scopeProfessional(Builder $query): Builder
+    {
+        return $query->channel(self::CHANNEL_PROFESSIONAL);
+    }
+
+    public function scopeLife(Builder $query): Builder
+    {
+        return $query->channel(self::CHANNEL_LIFE);
     }
 
     protected function slugSource(): string

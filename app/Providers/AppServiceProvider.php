@@ -9,13 +9,22 @@ use App\Models\Setting;
 use App\Models\Skill;
 use App\Models\SkillCategory;
 use App\Models\SocialProfile;
+use App\Models\SocialProfileGroup;
+use App\Models\Testimonial;
+use App\Models\Theme;
+use App\Models\Tool;
 use App\Observers\ArticleObserver;
 use App\Observers\ProjectObserver;
 use App\Observers\SettingObserver;
 use App\Observers\SkillCategoryObserver;
 use App\Observers\SkillObserver;
+use App\Observers\SocialProfileGroupObserver;
 use App\Observers\SocialProfileObserver;
+use App\Observers\TestimonialObserver;
+use App\Observers\ThemeObserver;
+use App\Observers\ToolObserver;
 use App\Support\Analytics\NullAnalyticsProvider;
+use App\Support\Mail\ConfiguresMailFromSettings;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -89,11 +98,36 @@ class AppServiceProvider extends ServiceProvider
         // SocialProfileObserver's own docblock).
         SocialProfile::observe(SocialProfileObserver::class);
 
+        // Phase 2 (E2-T8) — the /connect page renders one section per SocialProfileGroup;
+        // a group's heading/intro/order edit must bust that cached page (see
+        // SocialProfileGroupObserver's own docblock).
+        SocialProfileGroup::observe(SocialProfileGroupObserver::class);
+
         // Found in review: a new/edited Skill (or its category) never appeared on the
         // public /skills page — that page had no observer at all, same gap as the others
         // above (see SkillObserver/SkillCategoryObserver's own docblocks).
         Skill::observe(SkillObserver::class);
         SkillCategory::observe(SkillCategoryObserver::class);
+
+        // Phase 2 (E3-T5) — a theme row save/delete changes token overrides, the active
+        // window, or which row is default; every public page can render differently, so
+        // ThemeObserver busts the whole public-page cache (see its own docblock).
+        Theme::observe(ThemeObserver::class);
+
+        // Phase 2 (E5-T6) — a Tool save/delete busts the /tools index cache (see
+        // ToolObserver's own docblock).
+        Tool::observe(ToolObserver::class);
+
+        // Phase 2 (E6-T5) — Approve/Reject are plain $record->update() calls, so this
+        // fires on both; busts the /endorsements cache entry (see its own docblock for why
+        // that's currently a defensive no-op — the route isn't cached).
+        Testimonial::observe(TestimonialObserver::class);
+
+        // Phase 2 (E5-T1) — makes the admin-configurable SMTP settings take effect for
+        // every mailer call this request/command makes (see its own docblock for the
+        // settings-table-may-not-exist-yet guard — this runs on every boot, migrate
+        // included).
+        app(ConfiguresMailFromSettings::class)->configure();
     }
 
     /**

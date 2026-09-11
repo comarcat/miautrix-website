@@ -6,6 +6,7 @@ use App\Models\Article;
 use App\Models\Profile;
 use App\Models\Project;
 use App\Models\User;
+use App\Support\Seo\OgImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -52,8 +53,11 @@ class SeoTest extends TestCase
         $response = $this->get(route('projects.show', $project->slug));
 
         $response->assertOk();
-        $response->assertSee('<link rel="canonical" href="' . route('projects.show', $project->slug) . '">', false);
-        $response->assertSee('<meta property="og:image" content="' . asset('images/og-default.png') . '">', false);
+        // E3-T7: the canonical host is pinned to config('site.canonical_host'), not the request host.
+        $response->assertSee('<link rel="canonical" href="https://' . config('site.canonical_host') . '/projects/' . $project->slug . '">', false);
+        // E2-T4: og:image is now always an absolute https URL, the og-default.png fallback included.
+        $response->assertSee('<meta property="og:image" content="' . OgImage::resolve(null) . '">', false);
+        $this->assertStringStartsWith('https://', OgImage::resolve(null));
         $response->assertSee('"@type":"CreativeWork"', false);
     }
 

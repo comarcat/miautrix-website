@@ -154,9 +154,18 @@ return [
     | available to. By default, the cookie will be available to the root
     | domain without subdomains. Typically, this shouldn't be changed.
     |
+    | Phase 2 (E3-T7): when SESSION_DOMAIN is unset, default to a `.`-prefixed
+    | registrable domain of CANONICAL_HOST (e.g. `.miautrix.tech`) so the session
+    | AND the `miautrix_theme` cookie are shared across `www.` and the apex — the
+    | www-vs-apex theme split (backlog item 10) came from a host-only cookie.
+    | Left null under `testing` so the test HTTP client (requests to 127.0.0.1)
+    | still round-trips its cookies.
+    |
     */
 
-    'domain' => env('SESSION_DOMAIN'),
+    'domain' => env('SESSION_DOMAIN', env('APP_ENV') === 'testing'
+        ? null
+        : '.' . preg_replace('/^www\./i', '', (string) env('CANONICAL_HOST', 'miautrix.tech'))),
 
     /*
     |--------------------------------------------------------------------------

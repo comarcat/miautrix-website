@@ -11,6 +11,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $profile_id
+ * @property int|null $group_id
  * @property string $platform
  * @property string $url
  * @property bool $show_in_footer
@@ -26,6 +27,7 @@ class SocialProfile extends Model
 
     protected $fillable = [
         'profile_id',
+        'group_id',
         'platform',
         'url',
         'show_in_footer',
@@ -43,6 +45,16 @@ class SocialProfile extends Model
     public function profile(): BelongsTo
     {
         return $this->belongsTo(Profile::class);
+    }
+
+    /**
+     * Phase 2 (E2-T6) — the /connect section this profile belongs to. Null = ungrouped.
+     *
+     * @return BelongsTo<SocialProfileGroup, $this>
+     */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(SocialProfileGroup::class, 'group_id');
     }
 
     /**

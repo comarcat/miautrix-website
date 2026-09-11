@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Exceptions\MediaInUseException;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
@@ -27,6 +28,9 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media as SpatieMedia;
  * @property int $size
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read Pivot|null $pivot set only when
+ *   loaded through a belongsToMany pivot relation (e.g. Project::projectFiles(), E4-T3) —
+ *   absent otherwise.
  */
 class Media extends SpatieMedia
 {
@@ -53,6 +57,8 @@ class Media extends SpatieMedia
         ['table' => 'skills', 'column' => 'icon_media_id', 'publishedColumn' => null],
         // Same for social_profiles — no `published` gate of its own.
         ['table' => 'social_profiles', 'column' => 'icon_media_id', 'publishedColumn' => null],
+        // Phase 2 (E5-T5).
+        ['table' => 'tools', 'column' => 'tool_file_media_id', 'publishedColumn' => 'published'],
     ];
 
     protected static function booted(): void
@@ -78,13 +84,20 @@ class Media extends SpatieMedia
             }
         }
 
-        // project_media has no published column of its own — a project's own status governs.
-        $usedByAPublishedProject = DB::table('project_media')
-            ->join('projects', 'projects.id', '=', 'project_media.project_id')
-            ->where('project_media.media_id', $this->id)
-            ->where('projects.published', true)
-            ->exists();
+        // project_media/project_files have no published column of their own — a project's
+        // own status governs (E4-T3 added project_files alongside the pre-existing gallery).
+        foreach (['project_media', 'project_files'] as $pivotTable) {
+            $usedByAPublishedProject = DB::table($pivotTable)
+                ->join('projects', 'projects.id', '=', "{$pivotTable}.project_id")
+                ->where("{$pivotTable}.media_id", $this->id)
+                ->where('projects.published', true)
+                ->exists();
 
-        return $usedByAPublishedProject;
+            if ($usedByAPublishedProject) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

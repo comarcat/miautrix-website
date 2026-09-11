@@ -7,7 +7,18 @@
 ])
 
 @php
-    $canonicalUrl = $canonical ?? url()->current();
+    // E3-T7 — pin the canonical (and og:url) host to the one canonical host, so a page
+    // served on `www.` and on the apex both advertise the same URL (paired with the
+    // Cloudflare www->apex 301). Path + query are preserved: from the page's explicit
+    // :canonical when given, otherwise from the current request URI.
+    if ($canonical) {
+        $canonicalPath = parse_url($canonical, PHP_URL_PATH) ?: '/';
+        $canonicalQuery = parse_url($canonical, PHP_URL_QUERY);
+        $canonicalTail = $canonicalPath . ($canonicalQuery ? '?' . $canonicalQuery : '');
+    } else {
+        $canonicalTail = request()->getRequestUri();
+    }
+    $canonicalUrl = 'https://' . config('site.canonical_host') . $canonicalTail;
 @endphp
 
 <title>{{ $title }}</title>

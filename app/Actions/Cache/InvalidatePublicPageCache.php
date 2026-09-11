@@ -5,6 +5,7 @@ namespace App\Actions\Cache;
 use App\Models\Article;
 use App\Models\Project;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 /**
  * E5-T2 (§9 step 26) — invalidates one cached public-page entry immediately. Called from a
@@ -32,12 +33,44 @@ use Illuminate\Support\Facades\Cache;
  */
 class InvalidatePublicPageCache
 {
+    /**
+     * E3-T6 — every hostname CachePublicPage::keyFor() may have keyed an entry under: the
+     * canonical host and its `www.` sibling, plus the APP_URL host and its `www.` sibling
+     * (they diverge in local/test — APP_URL is 127.0.0.1 while canonical_host is
+     * miautrix.tech — and on staging APP_URL is the staging domain, so this covers it with
+     * no extra env var). Extra forgets are harmless; a missed one leaves a stale page, so
+     * the list errs wide.
+     *
+     * @return list<string>
+     */
+    private function hosts(): array
+    {
+        $seeds = [
+            (string) config('site.canonical_host', 'miautrix.tech'),
+            (string) (parse_url((string) config('app.url'), PHP_URL_HOST) ?: ''),
+        ];
+
+        $hosts = [];
+        foreach ($seeds as $seed) {
+            if ($seed === '') {
+                continue;
+            }
+            $bare = (string) Str::of($seed)->replaceMatches('/^www\./i', '');
+            $hosts[] = $bare;
+            $hosts[] = 'www.' . $bare;
+        }
+
+        return array_values(array_unique($hosts));
+    }
+
     public function __invoke(string $routePath): void
     {
         $routePath = ltrim($routePath, '/');
 
-        foreach (['technical', 'matrix'] as $theme) {
-            Cache::forget("public-page:{$theme}:{$routePath}");
+        foreach ($this->hosts() as $host) {
+            foreach (['technical', 'matrix'] as $theme) {
+                Cache::forget("public-page:{$host}:{$theme}:{$routePath}");
+            }
         }
     }
 
@@ -54,6 +87,17 @@ class InvalidatePublicPageCache
     }
 
     /**
+     * Phase 2 (E4-T8) — the theme-gated /life blog has its own index + detail entries,
+     * distinct from forArticle()'s /blog ones. Called from ArticleObserver only when the
+     * saved/deleted article's channel is 'life'.
+     */
+    public function forLife(Article $article): void
+    {
+        $this->__invoke('life/' . $article->slug);
+        $this->__invoke('life');
+    }
+
+    /**
      * The home page reads a handful of Setting rows directly (home_hero_eyebrow/heading/
      * subheading) — any Setting save busts it, rather than checking which key changed,
      * since Settings are edited rarely enough that this isn't the "nuclear flush on every
@@ -61,13 +105,16 @@ class InvalidatePublicPageCache
      *
      * Not routed through __invoke(): Request::path() returns the literal string '/' for the
      * root URL (the one path Laravel doesn't strip the leading slash from), so
-     * CachePublicPage::keyFor() keys it as 'public-page:{theme}:/' — ltrim()-ing that '/' the
-     * way every other route path needs would produce the wrong key (an empty path segment).
+     * CachePublicPage::keyFor() keys it as 'public-page:{host}:{theme}:/' — ltrim()-ing that
+     * '/' the way every other route path needs would produce the wrong key (an empty path
+     * segment).
      */
     public function forHome(): void
     {
-        foreach (['technical', 'matrix'] as $theme) {
-            Cache::forget("public-page:{$theme}:/");
+        foreach ($this->hosts() as $host) {
+            foreach (['technical', 'matrix'] as $theme) {
+                Cache::forget("public-page:{$host}:{$theme}:/");
+            }
         }
     }
 
@@ -99,5 +146,50 @@ class InvalidatePublicPageCache
     public function forSkills(): void
     {
         $this->__invoke('skills');
+    }
+
+    /**
+     * Phase 2 (E2-T8) — a SocialProfileGroup only affects the /connect page (its heading,
+     * intro and ordering), never the footer, so a group save/delete busts just that one
+     * entry rather than the whole forSocialProfiles() sweep.
+     */
+    public function forConnect(): void
+    {
+        $this->__invoke('connect');
+    }
+
+    /**
+     * Phase 2 (E6-T5) — /endorsements itself is registered OUTSIDE cache.public (E6-T3,
+     * same reasoning as /contact: it mounts a live Livewire component), so in the current
+     * app this is a defensive no-op against a cache entry that can't actually exist yet.
+     * Kept anyway — TestimonialObserver calls it on every save/delete, exactly like every
+     * other content-change observer, so nothing regresses silently if /endorsements is ever
+     * moved back into the cached group.
+     */
+    public function forEndorsements(): void
+    {
+        $this->__invoke('endorsements');
+    }
+
+    /**
+     * E3-T5 — a `themes` row save/delete can change how ANY public page renders (token
+     * overrides, the active window, which row is default), so this is a deliberate full
+     * sweep: every seeded theme × every known host (see hosts()) × every statically-known
+     * public path (or a single `$path` when given). The two `{slug}` detail routes are left
+     * to the normal TTL — same reasoning as forSocialProfiles().
+     */
+    public function forAllThemes(?string $path = null): void
+    {
+        $paths = $path !== null
+            ? [($trimmed = ltrim($path, '/')) === '' ? '/' : $trimmed]
+            : ['/', 'about', 'experience', 'skills', 'resume', 'projects', 'connect', 'blog'];
+
+        foreach ($paths as $p) {
+            foreach ($this->hosts() as $host) {
+                foreach (['technical', 'matrix'] as $theme) {
+                    Cache::forget("public-page:{$host}:{$theme}:{$p}");
+                }
+            }
+        }
     }
 }

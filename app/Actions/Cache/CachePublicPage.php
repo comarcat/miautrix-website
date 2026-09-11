@@ -56,16 +56,21 @@ class CachePublicPage
     }
 
     /**
-     * 'public-page:' + theme + the path (no leading slash — Request::path() already strips
-     * it) and, when present, the query string. The theme segment matches
-     * InvalidatePublicPageCache::forProject(), which must forget both themes' entries for a
-     * project — it does not know which theme any given cached visitor was on.
+     * 'public-page:' + host + theme + the path (no leading slash — Request::path() already
+     * strips it) and, when present, the query string.
+     *
+     * E3-T6 (§9 step 22): the host segment was added after production showed `www.` and the
+     * apex sharing one entry per theme and serving each other's frozen HTML — including the
+     * wrong host's absolute URLs and whichever host's snapshot of published rows was cached
+     * first (reported as the Matrix theme showing no projects on one hostname). Keying by
+     * host isolates the two. The theme segment still matches InvalidatePublicPageCache,
+     * which forgets both themes because it cannot know which one a cached visitor was on.
      */
     public static function keyFor(Request $request): string
     {
         $query = $request->getQueryString();
         $theme = $request->cookie(ResolveTheme::COOKIE_NAME) === 'matrix' ? 'matrix' : 'technical';
 
-        return 'public-page:' . $theme . ':' . $request->path() . ($query ? '?' . $query : '');
+        return 'public-page:' . $request->getHost() . ':' . $theme . ':' . $request->path() . ($query ? '?' . $query : '');
     }
 }

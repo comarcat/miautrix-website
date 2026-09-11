@@ -31,20 +31,11 @@
         @if ($projects->isEmpty())
             <x-alert variant="info">No projects published yet.</x-alert>
         @else
+            {{-- E4-T6 — extracted to <x-project-card> so the "On time · On budget" badge has
+                 one place to live. --}}
             <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 @foreach ($projects as $project)
-                    <x-card :title="$project->title">
-                        @if ($project->projectCategory)
-                            <x-badge variant="accent" class="mb-2">{{ $project->projectCategory->name }}</x-badge>
-                        @endif
-                        <p>{{ $project->summary }}</p>
-
-                        <x-slot:footer>
-                            <x-button :href="route('projects.show', $project->slug)" variant="outline" size="sm">
-                                View project
-                            </x-button>
-                        </x-slot:footer>
-                    </x-card>
+                    <x-project-card :project="$project" />
                 @endforeach
             </div>
 

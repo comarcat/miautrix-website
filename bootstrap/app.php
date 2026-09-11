@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Cache\CachePublicPage;
+use App\Http\Middleware\RecordPageView;
 use App\Http\Middleware\ResolveTheme;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
@@ -43,6 +44,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // its own separate middleware array in AdminPanelProvider and would never see a
         // web-group-scoped addition.
         $middleware->append(SecurityHeaders::class);
+
+        // Self-hosted page-view analytics (E5-T8, §9 step 42) — entirely flag-gated
+        // (site.analytics.record_page_views); appended globally so it can see /admin* and
+        // filter it OUT, which a web(append:)-scoped addition couldn't.
+        $middleware->append(RecordPageView::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

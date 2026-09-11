@@ -52,11 +52,11 @@ class PageCacheTest extends TestCase
         $project = Project::factory()->create(['title' => 'Toggle Project', 'slug' => 'toggle-project']);
 
         $this->get(route('projects.show', $project->slug))->assertOk();
-        $this->assertTrue(Cache::has('public-page:technical:projects/toggle-project'));
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:projects/toggle-project'));
 
         $project->update(['published' => false]);
 
-        $this->assertFalse(Cache::has('public-page:technical:projects/toggle-project'));
+        $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:projects/toggle-project'));
         $this->get(route('projects.show', $project->slug))->assertNotFound();
     }
 
@@ -68,8 +68,8 @@ class PageCacheTest extends TestCase
         $this->get(route('projects.index'))->assertOk();
         $this->get(route('projects.index', ['category' => 'web']))->assertOk();
 
-        $this->assertTrue(Cache::has('public-page:technical:projects'));
-        $this->assertTrue(Cache::has('public-page:technical:projects?category=web'));
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:projects'));
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:projects?category=web'));
     }
 
     /**
@@ -81,12 +81,12 @@ class PageCacheTest extends TestCase
     public function test_publishing_a_new_project_invalidates_the_projects_index_cache_entry(): void
     {
         $this->get(route('projects.index'))->assertOk();
-        $this->assertTrue(Cache::has('public-page:technical:projects'));
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:projects'));
 
         $project = Project::factory()->create(['title' => 'Brand New Project', 'published' => false]);
         $project->update(['published' => true]);
 
-        $this->assertFalse(Cache::has('public-page:technical:projects'));
+        $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:projects'));
         $this->get(route('projects.index'))->assertSee('Brand New Project');
     }
 
@@ -99,7 +99,7 @@ class PageCacheTest extends TestCase
     public function test_publishing_a_new_article_invalidates_both_its_detail_and_the_blog_index_cache_entry(): void
     {
         $this->get(route('blog.index'))->assertOk();
-        $this->assertTrue(Cache::has('public-page:technical:blog'));
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:blog'));
 
         // A draft's show page 404s and is never cached (CachePublicPage only caches a 200) —
         // the assertion that matters is what happens to the index cache once it's published.
@@ -108,8 +108,8 @@ class PageCacheTest extends TestCase
 
         $article->update(['published_at' => now()]);
 
-        $this->assertFalse(Cache::has('public-page:technical:blog'));
-        $this->assertFalse(Cache::has('public-page:technical:blog/fresh-off-the-press'));
+        $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:blog'));
+        $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:blog/fresh-off-the-press'));
         $this->get(route('blog.index'))->assertSee('Fresh Off The Press');
         $this->get(route('blog.show', $article->slug))->assertOk();
     }
@@ -120,11 +120,11 @@ class PageCacheTest extends TestCase
 
         $first = $this->get(route('blog.show', $article->slug));
         $first->assertSee('January 1, 2026');
-        $this->assertTrue(Cache::has('public-page:technical:blog/dated-article'));
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:blog/dated-article'));
 
         $article->update(['published_at' => '2026-03-15']);
 
-        $this->assertFalse(Cache::has('public-page:technical:blog/dated-article'));
+        $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:blog/dated-article'));
         $this->get(route('blog.show', $article->slug))->assertSee('March 15, 2026');
     }
 
@@ -134,13 +134,13 @@ class PageCacheTest extends TestCase
 
         $this->get(route('blog.index'))->assertSee('Doomed Article');
         $this->get(route('blog.show', $article->slug))->assertOk();
-        $this->assertTrue(Cache::has('public-page:technical:blog'));
-        $this->assertTrue(Cache::has('public-page:technical:blog/doomed-article'));
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:blog'));
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:blog/doomed-article'));
 
         $article->delete();
 
-        $this->assertFalse(Cache::has('public-page:technical:blog'));
-        $this->assertFalse(Cache::has('public-page:technical:blog/doomed-article'));
+        $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:blog'));
+        $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:blog/doomed-article'));
         $this->get(route('blog.index'))->assertDontSee('Doomed Article');
     }
 
@@ -164,7 +164,7 @@ class PageCacheTest extends TestCase
         }
 
         foreach (['/', 'about', 'experience', 'skills', 'resume', 'projects', 'connect', 'blog'] as $key) {
-            $this->assertTrue(Cache::has("public-page:technical:{$key}"));
+            $this->assertTrue(Cache::has("public-page:127.0.0.1:technical:{$key}"));
         }
 
         SocialProfile::create([
@@ -175,7 +175,7 @@ class PageCacheTest extends TestCase
         ]);
 
         foreach (['/', 'about', 'experience', 'skills', 'resume', 'projects', 'connect', 'blog'] as $key) {
-            $this->assertFalse(Cache::has("public-page:technical:{$key}"));
+            $this->assertFalse(Cache::has("public-page:127.0.0.1:technical:{$key}"));
         }
 
         $this->get(route('connect'))->assertSee('LinkedIn');
@@ -199,7 +199,7 @@ class PageCacheTest extends TestCase
         $category = SkillCategory::create(['name' => 'Networking', 'sort_order' => 0]);
 
         $this->get(route('skills'))->assertOk();
-        $this->assertTrue(Cache::has('public-page:technical:skills'));
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:skills'));
 
         Skill::create([
             'profile_id' => $profile->id,
@@ -209,15 +209,15 @@ class PageCacheTest extends TestCase
             'sort_order' => 0,
         ]);
 
-        $this->assertFalse(Cache::has('public-page:technical:skills'));
+        $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:skills'));
         $this->get(route('skills'))->assertSee('Ubiquiti');
 
         $this->get(route('skills'))->assertOk();
-        $this->assertTrue(Cache::has('public-page:technical:skills'));
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:skills'));
 
         $category->update(['name' => 'Networking & Security']);
 
-        $this->assertFalse(Cache::has('public-page:technical:skills'));
+        $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:skills'));
         $this->get(route('skills'))->assertSee('Networking & Security');
     }
 
@@ -235,6 +235,6 @@ class PageCacheTest extends TestCase
     {
         $this->get(route('contact'))->assertOk();
 
-        $this->assertFalse(Cache::has('public-page:technical:contact'));
+        $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:contact'));
     }
 }

@@ -112,6 +112,11 @@ set -euo pipefail
 DEPLOY_PATH="$1"; RELEASE_ID="$2"
 cd "$DEPLOY_PATH/releases/$RELEASE_ID"
 php artisan migrate --force
+# E3-T1/E3-T9: the two baseline theme rows (technical/matrix). Idempotent (updateOrCreate
+# on `key`) and admin-user-free, so it needs no ADMIN_SEED_* vars. ThemeResolver still
+# degrades to the literal cookie path when the table is empty, so this is
+# belt-and-suspenders, not load-bearing.
+php artisan db:seed --class=ThemeSeeder --force
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache

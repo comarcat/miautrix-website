@@ -36,6 +36,8 @@ class DatabaseSeeder extends Seeder
     {
         $admin = $this->seedAdminUser();
         $this->call(RolesSeeder::class);
+        // Phase 2 (E3-T1) — standalone-runnable, admin-user-free (db:seed --class=ThemeSeeder).
+        $this->call(ThemeSeeder::class);
 
         $profile = $this->seedProfile($admin);
         $companies = $this->seedCompanies();

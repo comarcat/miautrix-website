@@ -10,6 +10,11 @@ use App\Models\Media;
  * Deliberately a plain static helper, not a Model trait: only Project and Article currently
  * have a public detail page to put an OG image on, so there's no shared base class for this
  * to naturally live on.
+ *
+ * E2-T4 (§9 step 12) — the return value is now always an absolute `https://` URL. Crawlers
+ * (Facebook, LinkedIn, Slack, iMessage) reject a scheme-relative or path-only `og:image`
+ * outright, so both `route()` and `asset()` output is forced to the https scheme regardless
+ * of the request scheme or APP_URL.
  */
 class OgImage
 {
@@ -19,10 +24,22 @@ class OgImage
             $media = Media::find($mediaId);
 
             if ($media) {
-                return route('media.show', [$media, $media->file_name]);
+                return self::https(route('media.show', [$media, $media->file_name], absolute: true));
             }
         }
 
-        return asset('images/og-default.png');
+        return self::https(asset('images/og-default.png'));
+    }
+
+    private static function https(string $url): string
+    {
+        if (preg_match('#^https?://#i', $url)) {
+            return preg_replace('#^http://#i', 'https://', $url, 1) ?? $url;
+        }
+
+        // Path-only or scheme-relative — anchor it to the configured site origin.
+        $origin = 'https://' . preg_replace('#^https?://#i', '', rtrim((string) config('app.url'), '/'));
+
+        return $origin . '/' . ltrim($url, '/');
     }
 }

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Theme;
 
 use App\Http\Middleware\ResolveTheme;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
@@ -18,6 +19,8 @@ use Tests\TestCase;
  */
 class ThemeSwitchTest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();

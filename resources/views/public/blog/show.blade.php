@@ -27,6 +27,11 @@
             </p>
             <h1 class="text-display text-foreground">{{ $article->title }}</h1>
 
+            {{-- E4-T2 — real PDF export (routes/web.php, outside cache.public). --}}
+            <div>
+                <x-button :href="route('blog.pdf', $article->slug)" variant="outline" size="sm">Download PDF</x-button>
+            </div>
+
             {{-- The RichEditor body is already-sanitized HTML produced by Filament's own
                  Tiptap editor (E3-T6) — no raw user input ever reaches this page.
                  [&>*+*]:mt-4 spaces block elements without needing the (uninstalled)
@@ -40,6 +45,17 @@
             <div class="text-body text-foreground [&>*+*]:mt-4">
                 {!! $article->body !!}
             </div>
+
+            {{-- E2-T3 — every button routes through /s/{network}/article/{id} (ShareRedirectController)
+                 which logs one share_clicks row and then 302s to the network's own share endpoint. --}}
+            <x-share-links
+                class="mt-8 border-t border-border pt-6"
+                :url="route('blog.show', $article->slug)"
+                :title="$article->title"
+                :summary="$article->excerpt"
+                share-type="article"
+                :share-id="$article->id"
+            />
         </article>
     </div>
 </x-layouts::app>
