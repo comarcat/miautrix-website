@@ -8,6 +8,7 @@ use App\Http\Controllers\Public\DocumentDownloadController;
 use App\Http\Controllers\Public\DocumentPreviewController;
 use App\Http\Controllers\Public\ExperienceController;
 use App\Http\Controllers\Public\HomeController;
+use App\Http\Controllers\Public\LifeController;
 use App\Http\Controllers\Public\MediaController;
 use App\Http\Controllers\Public\ProjectController;
 use App\Http\Controllers\Public\ProjectFileDownloadController;
@@ -46,6 +47,12 @@ Route::middleware('cache.public')->group(function (): void {
     Route::get('/connect', [ConnectController::class, 'index'])->name('connect');
     Route::get('/blog', [BlogController::class, 'index'])->name('blog.index');
     Route::get('/blog/{slug}', [BlogController::class, 'show'])->name('blog.show');
+    // Phase 2 (E4-T8) — theme-gated "Life / Gaming" blog (backlog item 11). 404s unless the
+    // active theme's shows_life_blog is true (LifeController, via ThemeResolver — not the
+    // raw cookie). The key is already host+theme-scoped (E3-T6), so the gate itself is safe
+    // to cache alongside everything else in this group.
+    Route::get('/life', [LifeController::class, 'index'])->name('life.index');
+    Route::get('/life/{slug}', [LifeController::class, 'show'])->name('life.show');
 });
 Route::get('/feed.xml', [BlogController::class, 'feed'])->name('feed');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');

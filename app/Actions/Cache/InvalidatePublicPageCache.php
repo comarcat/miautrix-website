@@ -87,6 +87,17 @@ class InvalidatePublicPageCache
     }
 
     /**
+     * Phase 2 (E4-T8) — the theme-gated /life blog has its own index + detail entries,
+     * distinct from forArticle()'s /blog ones. Called from ArticleObserver only when the
+     * saved/deleted article's channel is 'life'.
+     */
+    public function forLife(Article $article): void
+    {
+        $this->__invoke('life/' . $article->slug);
+        $this->__invoke('life');
+    }
+
+    /**
      * The home page reads a handful of Setting rows directly (home_hero_eyebrow/heading/
      * subheading) — any Setting save busts it, rather than checking which key changed,
      * since Settings are edited rarely enough that this isn't the "nuclear flush on every

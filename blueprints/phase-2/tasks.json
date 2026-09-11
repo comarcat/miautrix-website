@@ -915,7 +915,7 @@
    "app/Actions/Cache/InvalidatePublicPageCache.php",
    "tests/Feature/Phase2/LifeBlogVisibilityTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E4-T9",

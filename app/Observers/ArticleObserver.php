@@ -17,13 +17,22 @@ use App\Models\Article;
  * Article gates public visibility on the DATE itself (Article::scopePublished():
  * `published_at <= now()`), and changing that date (even while it stays "published") changes
  * both the article's own displayed date and its sort position on the index.
+ *
+ * Phase 2 (E4-T8): routed to forLife() instead of forArticle() when the current channel is
+ * 'life' — /life has its own index/detail cache entries, distinct from /blog's. A channel
+ * move busts BOTH sides (the article's old channel page must stop showing it; its new one
+ * must start).
  */
 class ArticleObserver
 {
     public function saved(Article $article): void
     {
         if ($article->wasChanged('published_at')) {
-            app(InvalidatePublicPageCache::class)->forArticle($article);
+            $this->invalidateForChannel($article, $article->channel);
+        }
+
+        if ($article->wasChanged('channel')) {
+            $this->invalidateForChannel($article, $article->getOriginal('channel'));
         }
     }
 
@@ -33,6 +42,15 @@ class ArticleObserver
      */
     public function deleted(Article $article): void
     {
-        app(InvalidatePublicPageCache::class)->forArticle($article);
+        $this->invalidateForChannel($article, $article->channel);
+    }
+
+    private function invalidateForChannel(Article $article, ?string $channel): void
+    {
+        if ($channel === Article::CHANNEL_LIFE) {
+            app(InvalidatePublicPageCache::class)->forLife($article);
+        } else {
+            app(InvalidatePublicPageCache::class)->forArticle($article);
+        }
     }
 }

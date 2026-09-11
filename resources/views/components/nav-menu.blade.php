@@ -15,6 +15,13 @@
      * submenu is open. All chrome is driven by the --menu-* custom properties, which both
      * theme blocks in app.css define.
      */
+    // E4-T8 — the raw cookie/theme key isn't enough on its own (a disabled or out-of-window
+    // event theme still resolves to the default elsewhere); this mirrors ThemeResolver's own
+    // fallback so the nav and the page body never disagree about whether Life is visible.
+    $showsLifeBlog = config('site.themes.dynamic')
+        ? (bool) (\App\Models\Theme::where('key', $theme)->value('shows_life_blog') ?? ($theme === 'matrix'))
+        : $theme === 'matrix';
+
     $groups = [
         'Work' => [
             ['label' => 'Experience', 'href' => route('experience')],
@@ -22,9 +29,10 @@
             ['label' => 'Projects', 'href' => route('projects.index')],
             ['label' => 'Resume', 'href' => route('resume')],
         ],
-        'Writing' => [
+        'Writing' => array_filter([
             ['label' => 'Blog', 'href' => route('blog.index')],
-        ],
+            $showsLifeBlog ? ['label' => 'Life', 'href' => route('life.index')] : null,
+        ]),
     ];
 
     $links = [
