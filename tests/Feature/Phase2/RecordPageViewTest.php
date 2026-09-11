@@ -52,6 +52,9 @@ class RecordPageViewTest extends TestCase
 
     public function test_flag_off_inserts_zero_rows(): void
     {
+        // Flag defaults ON as of E5-T9 — toggled off here to prove the gate itself.
+        $this->withSiteFlag('site.analytics.record_page_views', false);
+
         $this->get('/')->assertOk();
         $this->get('/about');
 

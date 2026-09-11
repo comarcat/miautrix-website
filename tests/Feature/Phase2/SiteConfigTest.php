@@ -6,12 +6,12 @@ use Tests\TestCase;
 
 /**
  * E1-T1 (Phase 2, p2-step-01) — `config/site.php` carries the canonical host and the three
- * cross-cutting feature flags. This gate proves two things a later task depends on:
- *
- *  - every flag reads `false` on a plain checkout (no env override), so merging any Phase 2
- *    task leaves the live site byte-identical until its epic's final task flips the default;
- *  - `canonical_host` is wired to `CANONICAL_HOST` with `miautrix.tech` as the literal
- *    fallback.
+ * cross-cutting feature flags. This gate originally proved every flag read `false` on a
+ * plain checkout; each flag has since been flipped on in its own epic's final task
+ * (site.themes.dynamic: E3-T9/p2-step-25; site.csp.youtube_on_life: E4-T9/p2-step-34;
+ * site.analytics.record_page_views: E5-T9/p2-step-43) now that every feature it guards
+ * actually ships. `canonical_host` is wired to `CANONICAL_HOST` with `miautrix.tech` as the
+ * literal fallback.
  *
  * The override cases re-`require` the config file directly so `env()` re-evaluates against a
  * `putenv()`'d value — the framework has already booted and cached `config()` by the time a
@@ -22,11 +22,8 @@ class SiteConfigTest extends TestCase
 {
     public function test_the_feature_flags_have_their_expected_defaults(): void
     {
-        // site.themes.dynamic (E3-T9, p2-step-25) and site.csp.youtube_on_life (E4-T9,
-        // p2-step-34) are both on now that their epics shipped; analytics stays off until
-        // Epic 05's own final task.
         $this->assertTrue(config('site.themes.dynamic'));
-        $this->assertFalse(config('site.analytics.record_page_views'));
+        $this->assertTrue(config('site.analytics.record_page_views'));
         $this->assertTrue(config('site.csp.youtube_on_life'));
     }
 

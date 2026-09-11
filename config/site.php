@@ -40,9 +40,10 @@ return [
     ],
 
     'analytics' => [
-        // RecordPageView middleware. OFF: it early-returns before any DB write and
-        // `page_views` gets no rows.
-        'record_page_views' => env('SITE_ANALYTICS_RECORD_PAGE_VIEWS', false),
+        // RecordPageView middleware. ON as of E5-T9 (p2-step-43) — the Filament Analytics
+        // dashboard that consumes page_views now exists. Set
+        // SITE_ANALYTICS_RECORD_PAGE_VIEWS=false to stop writing rows with no redeploy.
+        'record_page_views' => env('SITE_ANALYTICS_RECORD_PAGE_VIEWS', true),
     ],
 
     'csp' => [
