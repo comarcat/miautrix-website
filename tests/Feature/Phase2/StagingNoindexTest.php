@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Phase2;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
@@ -16,6 +17,8 @@ use Tests\TestCase;
  */
 class StagingNoindexTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_a_public_route_is_noindex_on_staging(): void
     {
         $this->app['env'] = 'staging';

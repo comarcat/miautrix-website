@@ -1250,7 +1250,7 @@
    "database/factories/TestimonialFactory.php",
    "tests/Feature/Phase2/TestimonialSchemaTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E6-T2",

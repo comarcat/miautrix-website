@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\Profile;
 use App\Models\Project;
 use App\Models\SocialProfileGroup;
+use App\Models\Testimonial;
 use App\Models\Theme;
 use App\Models\Tool;
 use App\Policies\ArticlePolicy;
@@ -14,6 +15,7 @@ use App\Policies\AuditLogPolicy;
 use App\Policies\ProfilePolicy;
 use App\Policies\ProjectPolicy;
 use App\Policies\SocialProfileGroupPolicy;
+use App\Policies\TestimonialPolicy;
 use App\Policies\ThemePolicy;
 use App\Policies\ToolPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
@@ -33,6 +35,7 @@ class AuthServiceProvider extends ServiceProvider
         SocialProfileGroup::class => SocialProfileGroupPolicy::class,
         Theme::class => ThemePolicy::class,
         Tool::class => ToolPolicy::class,
+        Testimonial::class => TestimonialPolicy::class,
     ];
 
     public function boot(): void

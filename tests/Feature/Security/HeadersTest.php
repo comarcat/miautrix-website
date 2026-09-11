@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Security;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
@@ -13,6 +14,8 @@ use Tests\TestCase;
  */
 class HeadersTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_the_home_page_carries_the_core_security_headers(): void
     {
         $response = $this->get('/');

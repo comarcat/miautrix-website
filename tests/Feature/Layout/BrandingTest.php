@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Layout;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
@@ -14,6 +15,8 @@ use Tests\TestCase;
  */
 class BrandingTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_the_public_header_shows_the_brand_logo_image(): void
     {
         $response = $this->get(route('home'));
