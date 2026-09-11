@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\Projects\Schemas;
 
 use App\Filament\Schemas\HasSeoFields;
+use App\Filament\Support\MediaUploadField;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -54,6 +56,24 @@ class ProjectForm
                     ->required()
                     ->numeric()
                     ->default(0),
+                // Phase 2 (E4-T3) — supplementary downloadable files (PDFs, ZIP archives),
+                // distinct from the image gallery and the resume-style Document rows.
+                // `files` is not a column: CreateProject/EditProject turn each item's stored
+                // path into a Media row and sync the project_files pivot (same pattern as
+                // SocialProfile's icon upload — see those pages' own docblocks).
+                Repeater::make('files')
+                    ->label('Supplementary files')
+                    ->schema([
+                        MediaUploadField::make('path')
+                            ->label('File')
+                            ->required(),
+                        TextInput::make('label')
+                            ->label('Label (optional)')
+                            ->maxLength(255),
+                    ])
+                    ->addActionLabel('Add file')
+                    ->reorderable()
+                    ->columnSpanFull(),
                 self::seoFieldsSection(),
             ]);
     }

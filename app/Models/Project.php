@@ -117,6 +117,20 @@ class Project extends Model
         return $this->belongsToMany(Document::class, 'project_documents');
     }
 
+    /**
+     * Phase 2 (E4-T3) — supplementary downloadable files (PDFs, ZIP archives) distinct from
+     * the image gallery (media()) and the resume-style Document rows (documents()). Same
+     * composite-PK-pivot shape plus an optional admin-editable label and sort_order.
+     *
+     * @return BelongsToMany<Media, $this>
+     */
+    public function projectFiles(): BelongsToMany
+    {
+        return $this->belongsToMany(Media::class, 'project_files')
+            ->withPivot('label', 'sort_order')
+            ->orderByPivot('sort_order');
+    }
+
     protected function slugSource(): string
     {
         return $this->title;
