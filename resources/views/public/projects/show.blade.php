@@ -93,5 +93,23 @@
                 </ul>
             </section>
         @endif
+
+        {{-- E4-T4 — supplementary files (PDFs, ZIP archives) distinct from the Documents
+             section above and the image gallery; /projects/{slug}/files/{media} 404s unless
+             the project is published. --}}
+        @if ($project->projectFiles->isNotEmpty())
+            <section class="flex flex-col gap-4">
+                <h2 class="text-heading-2 text-foreground">Files</h2>
+                <ul class="flex flex-col gap-2">
+                    @foreach ($project->projectFiles as $file)
+                        <li>
+                            <x-button :href="route('projects.file', [$project->slug, $file])" variant="outline" size="sm">
+                                {{ $file->pivot->label ?: $file->file_name }}
+                            </x-button>
+                        </li>
+                    @endforeach
+                </ul>
+            </section>
+        @endif
     </div>
 </x-layouts::app>

@@ -10,6 +10,7 @@ use App\Http\Controllers\Public\ExperienceController;
 use App\Http\Controllers\Public\HomeController;
 use App\Http\Controllers\Public\MediaController;
 use App\Http\Controllers\Public\ProjectController;
+use App\Http\Controllers\Public\ProjectFileDownloadController;
 use App\Http\Controllers\Public\ProjectPdfController;
 use App\Http\Controllers\Public\ResumeController;
 use App\Http\Controllers\Public\ShareRedirectController;
@@ -59,6 +60,11 @@ Route::get('/s/{network}/{type}/{id}', ShareRedirectController::class)
 // the HTML page cache. Each controller 404s an unpublished entity.
 Route::get('/projects/{slug}/pdf', ProjectPdfController::class)->name('projects.pdf');
 Route::get('/blog/{slug}/pdf', ArticlePdfController::class)->name('blog.pdf');
+
+// Phase 2 (E4-T4) — supplementary project files. OUTSIDE cache.public: a binary body must
+// never enter the HTML page cache. 404s unless the project is published AND $media is one
+// of that project's own project_files.
+Route::get('/projects/{project}/files/{media}', ProjectFileDownloadController::class)->name('projects.file');
 
 // BUG FIXED (found investigating a secscanner.app report): /contact used to sit inside the
 // cache.public group above, directly contradicting that group's own comment ("EXCEPT ... and

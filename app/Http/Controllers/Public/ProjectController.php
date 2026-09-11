@@ -44,7 +44,7 @@ class ProjectController extends Controller
     public function show(string $slug): View
     {
         $project = Project::where('slug', $slug)
-            ->with(['technologies', 'media', 'documents', 'softwareProject', 'projectCategory'])
+            ->with(['technologies', 'media', 'documents', 'projectFiles', 'softwareProject', 'projectCategory'])
             ->first();
 
         if (! $project || ! $project->published) {

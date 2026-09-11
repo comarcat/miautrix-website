@@ -795,7 +795,7 @@
    "resources/views/public/projects/show.blade.php",
    "tests/Feature/Phase2/ProjectFilesPublicTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E4-T5",
