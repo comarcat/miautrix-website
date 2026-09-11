@@ -43,16 +43,26 @@ class MailSettings extends Page implements HasForms
      */
     public ?array $data = [];
 
+    /**
+     * BUG FIXED (found live after the Phase 2 deploy — reported as "mail configuration is
+     * empty"): before any admin ever saves through this page, every Setting::get() call below
+     * is null, so the form rendered completely blank even though .env's MAIL_* values are
+     * actively driving outbound mail right now (see ConfiguresMailFromSettings's own no-op
+     * fallback). That read as broken/unconfigured rather than "using the .env default,
+     * nothing saved here yet." Each field now falls back to the currently-effective
+     * config('mail.mailers.smtp.*') value, so the page shows what's actually in effect;
+     * save() is unchanged and still only persists what the admin explicitly submits.
+     */
     public function mount(): void
     {
         $this->getSchema('form')->fill([
-            'host' => Setting::get('mail.host'),
-            'port' => Setting::get('mail.port'),
-            'username' => Setting::get('mail.username'),
+            'host' => Setting::get('mail.host') ?? config('mail.mailers.smtp.host'),
+            'port' => Setting::get('mail.port') ?? config('mail.mailers.smtp.port'),
+            'username' => Setting::get('mail.username') ?? config('mail.mailers.smtp.username'),
             'password' => null,
-            'encryption' => Setting::get('mail.encryption'),
-            'from_address' => Setting::get('mail.from_address'),
-            'from_name' => Setting::get('mail.from_name'),
+            'encryption' => Setting::get('mail.encryption') ?? config('mail.mailers.smtp.encryption'),
+            'from_address' => Setting::get('mail.from_address') ?? config('mail.from.address'),
+            'from_name' => Setting::get('mail.from_name') ?? config('mail.from.name'),
         ]);
     }
 

@@ -81,9 +81,32 @@ use Symfony\Component\HttpFoundation\Response;
  * header at all (Chrome/Edge dropped their XSS Auditor in 2019, Firefox never had one) — so
  * sending `0` accomplishes nothing a browser will ever read. Removed entirely rather than
  * argued over; CSP (already hardened above) is the real, effective replacement.
+ *
+ * BUG FIXED (Phase 2 production regression, found live after the E6-T5 deploy — nav menu and
+ * theme token injection both silently non-functional): CachePublicPage caches the full
+ * response BODY for up to an hour, but this middleware calls `Vite::useCspNonce()` fresh on
+ * EVERY request — cache hit or miss — so the CSP header's nonce is regenerated every time
+ * while a cache-hit body still carries whatever nonce was live when it was first rendered.
+ * The two diverge on virtually every request after the first, so the browser blocks every
+ * nonce'd inline `<script>`/`<style>` a cached page carries (nav-menu.blade.php's Alpine
+ * component definition, app.blade.php's special-event theme token block, share-links.blade.php's
+ * Web Share progressive enhancement) — nav-menu's script defines `navMenu()` itself, so losing
+ * it doesn't just break arrow-key navigation, it breaks the menubar's click-to-open dropdowns
+ * entirely. Fixed by never baking a *live* nonce into cacheable HTML: those three views now
+ * render NONCE_PLACEHOLDER instead, and this middleware substitutes the CURRENT request's real
+ * nonce for that placeholder in the response body right before returning — on every request,
+ * cached or not, so the header and body are always in sync regardless of what a cache hit
+ * happens to be serving.
  */
 class SecurityHeaders
 {
+    /**
+     * Rendered by any Blade view that needs to bake a CSP nonce into HTML that might end up
+     * inside CachePublicPage's cache — never call Vite::cspNonce() directly for that purpose,
+     * it will go stale the moment the page is served from cache (see BUG FIXED above).
+     */
+    public const NONCE_PLACEHOLDER = '{{__csp_nonce__}}';
+
     private const PUBLIC_CSP_TEMPLATE = "default-src 'self'; "
         . "script-src 'self' 'unsafe-eval'; "
         . "style-src 'self' 'nonce-%s'; "
@@ -193,6 +216,23 @@ class SecurityHeaders
             // is the site owner's call to make deliberately, not something to do silently as
             // a side effect of a header fix.
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+        }
+
+        $content = $response->getContent();
+        if (is_string($content) && str_contains($content, self::NONCE_PLACEHOLDER)) {
+            // BUG FIXED (caught by the local gate, not live): Illuminate\Http\Response::
+            // setContent() unconditionally overwrites $response->original with whatever is
+            // passed to it — Laravel sets `original` to the controller's View instance when a
+            // view is first rendered, and assertViewHas()/assertViewIs() read it back. Calling
+            // setContent() again here to swap in the real nonce would silently replace that
+            // View reference with a plain string, breaking every view assertion on every page
+            // this substitution touches (in practice: every public page, since nav-menu is
+            // site-wide). Save and restore it around the call.
+            $original = $response->original ?? null;
+            $response->setContent(str_replace(self::NONCE_PLACEHOLDER, $nonce, $content));
+            if ($original !== null) {
+                $response->original = $original;
+            }
         }
 
         return $response;

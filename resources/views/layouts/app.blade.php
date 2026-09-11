@@ -59,7 +59,11 @@
                 ->implode(';');
         @endphp
         @if ($activeTheme)
-            <style nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">:root{ {!! $tokenCss !!} }</style>
+            {{-- This page's HTML may be served from CachePublicPage's cache for up to an hour,
+                 so a live Vite::cspNonce() baked in here would go stale the instant it's a
+                 cache hit — SecurityHeaders::NONCE_PLACEHOLDER is substituted for the real,
+                 current-request nonce on every response, cached or not (see its docblock). --}}
+            <style nonce="{{ \App\Http\Middleware\SecurityHeaders::NONCE_PLACEHOLDER }}">:root{ {!! $tokenCss !!} }</style>
         @endif
     @endif
 </head>

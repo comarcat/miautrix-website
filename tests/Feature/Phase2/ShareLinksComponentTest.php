@@ -2,21 +2,27 @@
 
 namespace Tests\Feature\Phase2;
 
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\Facades\Vite;
 use Tests\TestCase;
 
 /**
  * E2-T2 (Phase 2, p2-step-10) — `<x-share-links>` emits exactly six plain share-intent links
  * (Facebook, X, LinkedIn, WhatsApp, Reddit, email) with every parameter URL-encoded, loads
  * no third-party SDK, and nonces its one progressive-enhancement script.
+ *
+ * The component itself bakes in SecurityHeaders::NONCE_PLACEHOLDER, not a live Vite nonce —
+ * this component renders on pages CachePublicPage caches for up to an hour, so a live nonce
+ * baked in here would go stale the moment it's served from a cache hit. SecurityHeaders
+ * substitutes the real, current-request nonce for the placeholder on every response on its
+ * way out (see that middleware's own docblock); HeadersTest exercises that substitution
+ * end-to-end over real HTTP. This test renders the component directly via Blade::render(),
+ * bypassing the HTTP middleware stack entirely, so it only asserts the placeholder is present.
  */
 class ShareLinksComponentTest extends TestCase
 {
     private function render(): string
     {
-        Vite::useCspNonce();
-
         return Blade::render(
             '<x-share-links :url="$url" :title="$title" :summary="$summary" />',
             [
@@ -51,12 +57,10 @@ class ShareLinksComponentTest extends TestCase
         $this->assertStringNotContainsString('platform.twitter.com', $html);
     }
 
-    public function test_the_progressive_enhancement_script_carries_the_csp_nonce(): void
+    public function test_the_progressive_enhancement_script_carries_the_csp_nonce_placeholder(): void
     {
         $html = $this->render();
-        $nonce = Vite::cspNonce();
 
-        $this->assertNotEmpty($nonce);
-        $this->assertStringContainsString("<script nonce=\"{$nonce}\"", $html);
+        $this->assertStringContainsString('<script nonce="' . SecurityHeaders::NONCE_PLACEHOLDER . '"', $html);
     }
 }

@@ -41,7 +41,11 @@
         ['label' => 'Contact', 'href' => route('contact')],
     ];
 
-    $nonce = \Illuminate\Support\Facades\Vite::cspNonce();
+    // This component renders on every public page, most of which CachePublicPage caches for
+    // up to an hour — a live Vite::cspNonce() baked in here would go stale on a cache hit, so
+    // this bakes SecurityHeaders::NONCE_PLACEHOLDER instead, which that middleware substitutes
+    // for the real, current-request nonce on the way out of every response, cached or not.
+    $nonce = \App\Http\Middleware\SecurityHeaders::NONCE_PLACEHOLDER;
 @endphp
 
 <div

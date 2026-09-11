@@ -177,6 +177,42 @@ class HeadersTest extends TestCase
     }
 
     /**
+     * Regression test for a real production bug found live after the Phase 2 deploy: home is
+     * cached by CachePublicPage for up to an hour, and nav-menu.blade.php's inline `<script>`
+     * (which defines the `navMenu()` Alpine component the whole desktop menubar runs on) used
+     * to bake in a LIVE Vite::cspNonce() value at render time — fine on the first (cache-miss)
+     * request, but on every subsequent (cache-hit) request the CSP header carries a fresh
+     * nonce while the cached body still carries whichever nonce was live when it was first
+     * rendered. The two never matched again until the cache entry expired, so the browser
+     * permanently blocked the script and the entire menubar's click-to-open dropdowns silently
+     * stopped working. Asserted across TWO requests to the same URL specifically because the
+     * first request alone (a cache miss) cannot detect this — it would pass even with the bug.
+     */
+    public function test_the_nav_menu_script_nonce_matches_the_csp_header_even_on_a_cached_hit(): void
+    {
+        $assertNonceMatches = function (): void {
+            $response = $this->get('/');
+            $response->assertOk();
+
+            $csp = $response->headers->get('Content-Security-Policy');
+            $this->assertNotNull($csp);
+            $matched = preg_match("/style-src 'self' 'nonce-([^']+)';/", $csp, $matches);
+            $this->assertSame(1, $matched, 'CSP header must carry a nonce.');
+
+            $response->assertSee('<script nonce="' . $matches[1] . '"', false);
+        };
+
+        // First request: a cache MISS — renders fresh, so this alone proves nothing about the
+        // cache-hit path the real bug lived in.
+        $assertNonceMatches();
+
+        // Second request: CachePublicPage's TTL is 3600s, so this is now a cache HIT serving
+        // the exact same cached body — while SecurityHeaders still generates a brand-new
+        // nonce for the header on every request, cached or not.
+        $assertNonceMatches();
+    }
+
+    /**
      * Both public/robots.txt and public/.well-known/security.txt are plain static files, not
      * routed — the test HTTP kernel dispatches through the router only and has no static-file
      * fallback (nginx's try_files does, in production), so $this->get() 404s on them

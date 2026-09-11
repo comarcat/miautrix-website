@@ -41,7 +41,11 @@
             : $href;
     }
 
-    $nonce = \Illuminate\Support\Facades\Vite::cspNonce();
+    // Blog/project pages that mount this component are also cached by CachePublicPage for up
+    // to an hour — a live Vite::cspNonce() baked in here would go stale on a cache hit, so
+    // this bakes SecurityHeaders::NONCE_PLACEHOLDER instead, which that middleware substitutes
+    // for the real, current-request nonce on the way out of every response, cached or not.
+    $nonce = \App\Http\Middleware\SecurityHeaders::NONCE_PLACEHOLDER;
 @endphp
 
 <div {{ $attributes->merge(['class' => 'flex flex-wrap items-center gap-2']) }} data-share-links>
