@@ -43,6 +43,62 @@
             </div>
         </section>
 
+        {{-- E4-T6 — delivery-metrics stat strip. Every input is optional (E4-T5); rendered
+             only when at least one of the nine raw columns is set — never a placeholder row
+             of dashes when the project carries none of them. --}}
+        @php
+            $hasMetrics = collect([
+                $project->budget_planned, $project->budget_actual,
+                $project->planned_start, $project->planned_end,
+                $project->actual_start, $project->actual_end,
+                $project->team_size, $project->role, $project->outcome,
+            ])->contains(fn ($value) => $value !== null);
+        @endphp
+        @if ($hasMetrics)
+            <section class="flex flex-wrap gap-6 rounded-card border border-border bg-card p-4 font-mono text-mono text-muted-foreground">
+                @if ($project->budget_planned !== null || $project->budget_actual !== null)
+                    <div class="flex flex-col">
+                        <span class="text-foreground">Budget</span>
+                        <span>
+                            {{ $project->budget_planned !== null ? 'Planned $' . number_format((float) $project->budget_planned, 2) : 'Planned —' }}
+                            &middot;
+                            {{ $project->budget_actual !== null ? 'Actual $' . number_format((float) $project->budget_actual, 2) : 'Actual —' }}
+                        </span>
+                    </div>
+                @endif
+                @if ($project->budgetPerformancePct !== null)
+                    <div class="flex flex-col">
+                        <span class="text-foreground">Budget performance</span>
+                        <span>{{ $project->budgetPerformancePct }}%</span>
+                    </div>
+                @endif
+                @if ($project->schedulePerformancePct !== null)
+                    <div class="flex flex-col">
+                        <span class="text-foreground">Schedule performance</span>
+                        <span>{{ $project->schedulePerformancePct }}%</span>
+                    </div>
+                @endif
+                @if ($project->team_size !== null)
+                    <div class="flex flex-col">
+                        <span class="text-foreground">Team size</span>
+                        <span>{{ $project->team_size }}</span>
+                    </div>
+                @endif
+                @if ($project->role)
+                    <div class="flex flex-col">
+                        <span class="text-foreground">Role</span>
+                        <span>{{ $project->role }}</span>
+                    </div>
+                @endif
+                @if ($project->outcome)
+                    <div class="flex flex-col">
+                        <span class="text-foreground">Outcome</span>
+                        <span>{{ $project->outcome }}</span>
+                    </div>
+                @endif
+            </section>
+        @endif
+
         @if ($project->technologies->isNotEmpty())
             <section class="flex flex-wrap gap-2">
                 @foreach ($project->technologies as $technology)

@@ -11,6 +11,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
 class ProjectForm
@@ -74,6 +75,30 @@ class ProjectForm
                     ->addActionLabel('Add file')
                     ->reorderable()
                     ->columnSpanFull(),
+                // Phase 2 (E4-T6) — all nine delivery-metrics columns (E4-T5), every one
+                // optional. Project's own accessors (schedulePerformancePct,
+                // budgetPerformancePct, isOnTime, isOnBudget) compute from these on read —
+                // nothing here is itself a derived value.
+                Section::make('Delivery metrics')
+                    ->description('Optional — shown publicly only when at least one is set.')
+                    ->collapsed()
+                    ->columns(3)
+                    ->components([
+                        TextInput::make('budget_planned')
+                            ->numeric()
+                            ->prefix('$'),
+                        TextInput::make('budget_actual')
+                            ->numeric()
+                            ->prefix('$'),
+                        TextInput::make('team_size')
+                            ->numeric(),
+                        DatePicker::make('planned_start'),
+                        DatePicker::make('planned_end'),
+                        DatePicker::make('actual_start'),
+                        DatePicker::make('actual_end'),
+                        TextInput::make('role'),
+                        TextInput::make('outcome'),
+                    ]),
                 self::seoFieldsSection(),
             ]);
     }
