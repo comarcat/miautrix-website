@@ -1338,7 +1338,7 @@
    "app/Policies/TestimonialPolicy.php",
    "tests/Feature/Phase2/TestimonialResourceTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E6-T5",

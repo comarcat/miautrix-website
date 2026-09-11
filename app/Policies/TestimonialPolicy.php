@@ -44,4 +44,14 @@ class TestimonialPolicy
     {
         return $user->hasRole('super_admin');
     }
+
+    /**
+     * E6-T4 (§9 step 47) — the bespoke ability TestimonialsTable's Approve/Reject row
+     * actions authorize against (both use the same ability: either one is a moderation
+     * decision on the same row, not two separate permissions).
+     */
+    public function approve(User $user, Testimonial $testimonial): bool
+    {
+        return $user->hasRole('super_admin');
+    }
 }
