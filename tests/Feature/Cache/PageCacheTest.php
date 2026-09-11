@@ -12,6 +12,8 @@ use App\Models\SocialProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Livewire\Features\SupportAutoInjectedAssets\SupportAutoInjectedAssets;
+use Livewire\Mechanisms\FrontendAssets\FrontendAssets;
 use Tests\TestCase;
 
 /**
@@ -236,5 +238,67 @@ class PageCacheTest extends TestCase
         $this->get(route('contact'))->assertOk();
 
         $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:contact'));
+    }
+
+    /**
+     * Regression test for a real production bug found live after the Phase 2 deploy: E5-T3
+     * mounted `<livewire:terminal />` unconditionally in app.blade.php's shared layout — every
+     * page inside the cache.public group (not just /contact, which this docblock's neighbor
+     * above already excludes) now has a live Livewire component on it. On a cache HIT, the
+     * controller — and with it the terminal widget's mount/render/dehydrate cycle — never
+     * runs at all, so Livewire's RequestHandled listener has no signal that it should inject
+     * its script/style, and silently doesn't. Livewire bundles Alpine.js inside that same
+     * script tag rather than as a separate app.js import, so the effect wasn't "the terminal
+     * widget is inert" — it was "Alpine.js never initializes anywhere on the page," taking
+     * down the desktop nav menu's click-to-open dropdowns and every other x-data component
+     * site-wide, on every cache hit (i.e. on virtually every request after the first, given
+     * the 1-hour TTL). Fixed with Livewire::forceAssetInjection() in CachePublicPage's own
+     * cache-hit branch. Asserted across TWO requests specifically because the first request
+     * alone (a cache miss, where Livewire's normal component lifecycle still runs) cannot
+     * detect this — it would pass even with the bug.
+     */
+    public function test_livewires_script_and_style_are_still_injected_on_a_cache_hit(): void
+    {
+        $assertLivewireAssetsPresent = function (): void {
+            // Two static/singleton flags gate Livewire's asset injection, both normally reset
+            // by Livewire's own 'flush-state' event between requests — a no-op in real
+            // production, where every request gets a brand-new PHP-FPM process (and therefore
+            // fresh statics and a fresh container) regardless, but NOT reset between two plain
+            // $this->get() calls sharing one test method's process. Left alone,
+            // hasRenderedAComponentThisRequest would stay stuck true from the first request
+            // and make the second call pass even without the real fix (nothing to catch); the
+            // FrontendAssets flags would stay stuck true and make it fail even WITH the real
+            // fix (a false negative). Both must be reset to accurately simulate two genuinely
+            // separate requests.
+            SupportAutoInjectedAssets::$hasRenderedAComponentThisRequest = false;
+            SupportAutoInjectedAssets::$forceAssetInjection = false;
+            $frontendAssets = app(FrontendAssets::class);
+            $frontendAssets->hasRenderedStyles = false;
+            $frontendAssets->hasRenderedScripts = false;
+
+            $response = $this->get(route('home'));
+            $response->assertOk();
+
+            $html = $response->getContent();
+            $this->assertIsString($html);
+            $this->assertStringContainsString('data-livewire-style', $html, 'Livewire styles missing from the response.');
+            $this->assertMatchesRegularExpression(
+                '/<script[^>]+src="[^"]*livewire[^"]*\.js/',
+                $html,
+                'Livewire script tag missing from the response — Alpine.js ships inside it, so losing it breaks every x-data component site-wide.',
+            );
+        };
+
+        // First request: a cache MISS — the terminal widget genuinely mounts and Livewire's
+        // normal dehydrate() hook fires, so this alone proves nothing about the cache-hit path
+        // the real bug lived in.
+        $assertLivewireAssetsPresent();
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:/'));
+
+        // Second request: now a cache HIT serving the exact cached body from above, which
+        // never contained the Livewire tags in the first place (they're injected onto the
+        // *response* after caching already captured it) — without forceAssetInjection(),
+        // this assertion is exactly what the live bug failed.
+        $assertLivewireAssetsPresent();
     }
 }

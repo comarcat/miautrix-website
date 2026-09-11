@@ -6,6 +6,7 @@ use App\Http\Middleware\ResolveTheme;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Livewire\Livewire;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -28,6 +29,21 @@ use Symfony\Component\HttpFoundation\Response;
  * do nothing, because the redirected-to GET was answered entirely from cache before
  * ResolveTheme's cookie read (and the new data-theme attribute) ever had a chance to render.
  * The key now includes the resolved theme, so each theme gets its own cache entry per route.
+ *
+ * BUG FIXED (Phase 2 production regression, found live after the E6-T5 deploy — Alpine.js
+ * itself silently never initialized anywhere on the public site): app.blade.php mounts
+ * `<livewire:terminal />` unconditionally on every public page (E5-T3), and Livewire bundles
+ * Alpine.js inside its own auto-injected script tag — but that injection is driven by
+ * Livewire's `RequestHandled` listener checking whether an actual Livewire component rendered
+ * THIS request (via a `dehydrate()` lifecycle hook). A cache HIT here never invokes the
+ * controller at all, so the terminal widget never mounts, `dehydrate()` never fires, and
+ * Livewire silently skips injecting its script and style tags — taking Alpine.js down with
+ * it site-wide, since Alpine ships inside that same bundle, not as its own app.js import.
+ * `Livewire::forceAssetInjection()` is the documented escape hatch for exactly this ("assets
+ * needed even though no component technically rendered this request" — the same mechanism
+ * SupportNavigate uses for its own x-persist elements); calling it here makes the listener
+ * inject Livewire's script/style into the returned response regardless of the cached HTML's
+ * own (necessarily stale) content, on every hit.
  */
 class CachePublicPage
 {
@@ -43,6 +59,8 @@ class CachePublicPage
         $cached = Cache::get($key);
 
         if ($cached !== null) {
+            Livewire::forceAssetInjection();
+
             return response($cached, 200)->header('Content-Type', 'text/html; charset=UTF-8');
         }
 
