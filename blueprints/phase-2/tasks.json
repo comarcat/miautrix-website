@@ -1280,7 +1280,7 @@
    "app/Mail/TestimonialSubmitted.php",
    "tests/Feature/Phase2/TestimonialFormTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E6-T3",
