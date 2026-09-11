@@ -882,7 +882,7 @@
    "app/Filament/Resources/Articles/Tables/ArticlesTable.php",
    "tests/Feature/Phase2/ArticleChannelTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E4-T8",

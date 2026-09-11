@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\Articles\Schemas;
 
 use App\Filament\Schemas\HasSeoFields;
+use App\Models\Article;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -49,6 +51,15 @@ class ArticleForm
                     ->helperText('Set by the toggle above — adjust here for a specific time.')
                     ->hidden(fn (Get $get): bool => ! $get('is_published')),
                 Toggle::make('featured'),
+                // Phase 2 (E4-T7) — 'professional' (default) vs 'life'. Drives /feed.xml
+                // (professional only) and E4-T8's theme-gated /life blog.
+                Select::make('channel')
+                    ->options([
+                        Article::CHANNEL_PROFESSIONAL => 'Professional',
+                        Article::CHANNEL_LIFE => 'Life / Gaming',
+                    ])
+                    ->default(Article::CHANNEL_PROFESSIONAL)
+                    ->required(),
                 TextInput::make('slug')
                     ->unique(ignoreRecord: true)
                     ->helperText('Leave blank to auto-generate from the title.'),

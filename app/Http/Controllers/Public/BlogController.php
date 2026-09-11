@@ -43,7 +43,10 @@ class BlogController extends Controller
 
     public function feed(): Response
     {
-        $articles = Article::published()->latest('published_at')->get();
+        // Phase 2 (E4-T7) — professional-only; the future /life blog (E4-T8) gets no feed of
+        // its own (backlog item 11, confirmed with the user: "the life/gaming blog doesn't
+        // need an RSS/Json feeds only professional needs that").
+        $articles = Article::published()->professional()->latest('published_at')->get();
 
         return response(view('feed', ['articles' => $articles]))
             ->header('Content-Type', 'application/rss+xml; charset=UTF-8');

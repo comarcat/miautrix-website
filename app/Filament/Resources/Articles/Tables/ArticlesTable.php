@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Articles\Tables;
 
+use App\Models\Article;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -9,6 +10,7 @@ use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
@@ -27,6 +29,10 @@ class ArticlesTable
                     ->boolean(),
                 TextColumn::make('slug')
                     ->searchable(),
+                // Phase 2 (E4-T7).
+                TextColumn::make('channel')
+                    ->badge()
+                    ->sortable(),
                 IconColumn::make('published')
                     ->boolean(),
                 TextColumn::make('sort_order')
@@ -63,6 +69,11 @@ class ArticlesTable
             ])
             ->filters([
                 TrashedFilter::make(),
+                SelectFilter::make('channel')
+                    ->options([
+                        Article::CHANNEL_PROFESSIONAL => 'Professional',
+                        Article::CHANNEL_LIFE => 'Life / Gaming',
+                    ]),
             ])
             ->recordActions([
                 EditAction::make(),
