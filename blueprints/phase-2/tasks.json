@@ -622,7 +622,7 @@
    "infra/provision-staging.md",
    "tests/Feature/Phase2/CanonicalHostTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E3-T8",

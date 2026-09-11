@@ -21,6 +21,9 @@ use Illuminate\Validation\Rules\In;
  * Phase 2 (E3-T4, §9 step 20): with `site.themes.dynamic` OFF the accepted set is still the
  * two literals; with it ON the key must name a row in `themes` that is `enabled` and whose
  * active window contains today — the same test ThemeResolver applies when reading the cookie.
+ *
+ * Phase 2 (E3-T7, §9 step 23): the cookie is scoped to a `.`-prefixed registrable domain of
+ * `config('site.canonical_host')` so `www.` and the apex share one theme choice.
  */
 class ThemeController extends Controller
 {
@@ -30,11 +33,14 @@ class ThemeController extends Controller
             'theme' => ['required', 'string', $this->themeRule()],
         ]);
 
+        $registrable = preg_replace('/^www\./i', '', (string) config('site.canonical_host', 'miautrix.tech'));
+
         return back()
             ->withCookie(cookie(
                 name: ResolveTheme::COOKIE_NAME,
                 value: $validated['theme'],
                 minutes: 60 * 24 * 365,
+                domain: '.' . $registrable,
             ));
     }
 
