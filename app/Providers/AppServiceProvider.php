@@ -10,6 +10,7 @@ use App\Models\Skill;
 use App\Models\SkillCategory;
 use App\Models\SocialProfile;
 use App\Models\SocialProfileGroup;
+use App\Models\Theme;
 use App\Observers\ArticleObserver;
 use App\Observers\ProjectObserver;
 use App\Observers\SettingObserver;
@@ -17,6 +18,7 @@ use App\Observers\SkillCategoryObserver;
 use App\Observers\SkillObserver;
 use App\Observers\SocialProfileGroupObserver;
 use App\Observers\SocialProfileObserver;
+use App\Observers\ThemeObserver;
 use App\Support\Analytics\NullAnalyticsProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -101,6 +103,11 @@ class AppServiceProvider extends ServiceProvider
         // above (see SkillObserver/SkillCategoryObserver's own docblocks).
         Skill::observe(SkillObserver::class);
         SkillCategory::observe(SkillCategoryObserver::class);
+
+        // Phase 2 (E3-T5) — a theme row save/delete changes token overrides, the active
+        // window, or which row is default; every public page can render differently, so
+        // ThemeObserver busts the whole public-page cache (see its own docblock).
+        Theme::observe(ThemeObserver::class);
     }
 
     /**

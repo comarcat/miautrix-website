@@ -110,4 +110,34 @@ class InvalidatePublicPageCache
     {
         $this->__invoke('connect');
     }
+
+    /**
+     * E3-T5 — a `themes` row save/delete can change how ANY public page renders (token
+     * overrides, the active window, which row is default), so this is a deliberate full
+     * sweep: every seeded theme × every known host × every statically-known public path
+     * (or a single `$path` when given). Forgets BOTH the pre-E3-T6 keyless format
+     * (`public-page:{theme}:{path}`) and the host-segmented one (`public-page:{host}:{theme}:{path}`)
+     * so it stays correct across that key change. The two `{slug}` detail routes are left to
+     * the normal TTL — same reasoning as forSocialProfiles().
+     */
+    public function forAllThemes(?string $path = null): void
+    {
+        $paths = $path !== null
+            ? [($trimmed = ltrim($path, '/')) === '' ? '/' : $trimmed]
+            : ['/', 'about', 'experience', 'skills', 'resume', 'projects', 'connect', 'blog'];
+
+        $canonical = (string) config('site.canonical_host', 'miautrix.tech');
+        $bare = (string) preg_replace('/^www\./i', '', $canonical);
+        $hosts = array_values(array_unique([$canonical, $bare, 'www.' . $bare]));
+
+        foreach ($paths as $p) {
+            foreach (['technical', 'matrix'] as $theme) {
+                Cache::forget("public-page:{$theme}:{$p}");
+
+                foreach ($hosts as $host) {
+                    Cache::forget("public-page:{$host}:{$theme}:{$p}");
+                }
+            }
+        }
+    }
 }
