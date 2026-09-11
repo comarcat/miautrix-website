@@ -652,7 +652,7 @@
    "resources/css/app.css",
    "tests/Feature/Phase2/NavMenuA11yTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E3-T9",

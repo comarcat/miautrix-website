@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Themes\Schemas;
 
+use App\Models\Theme;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\TextInput;
@@ -26,9 +27,10 @@ class ThemeForm
                     ->label('Token overrides')
                     ->keyLabel('CSS custom property')
                     ->valueLabel('Value')
-                    ->keyPlaceholder('--color-accent')
+                    ->keyPlaceholder('--accent')
                     ->valuePlaceholder('#00ff9c')
-                    ->helperText('Only keys starting with -- are injected. technical/matrix ignore this and render from app.css.')
+                    ->helperText('Only keys starting with -- are injected; technical/matrix ignore this and render from app.css. Recognised keys: '
+                        . implode(', ', Theme::DOCUMENTED_TOKEN_KEYS) . '.')
                     ->default([]),
                 DatePicker::make('active_from')
                     ->helperText('First day this theme may be selected. Empty = no lower bound.'),

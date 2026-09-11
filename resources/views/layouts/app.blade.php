@@ -75,17 +75,11 @@
                 <span>miautrix</span>
             </a>
 
-            <nav aria-label="Primary" class="flex items-center gap-6 text-sm">
-                <a href="{{ route('home') }}" class="hover:text-accent-text">Home</a>
-                <a href="{{ route('about') }}" class="hover:text-accent-text">About</a>
-                <a href="{{ route('experience') }}" class="hover:text-accent-text">Experience</a>
-                <a href="{{ route('skills') }}" class="hover:text-accent-text">Skills</a>
-                <a href="{{ route('projects.index') }}" class="hover:text-accent-text">Projects</a>
-                <a href="{{ route('resume') }}" class="hover:text-accent-text">Resume</a>
-                <a href="{{ route('blog.index') }}" class="hover:text-accent-text">Blog</a>
-                <a href="{{ route('connect') }}" class="hover:text-accent-text">Connect</a>
-                <a href="{{ route('contact') }}" class="hover:text-accent-text">Contact</a>
-                <x-theme-switcher :theme="$theme ?? 'technical'" />
+            {{-- E3-T8 — flat nav replaced by the desktop-style menubar (Work/Writing
+                 submenus, About/Connect/Contact direct). The theme switcher rides along
+                 inside the component. --}}
+            <nav aria-label="Primary">
+                <x-nav-menu :theme="$theme ?? 'technical'" />
             </nav>
         </div>
     </header>

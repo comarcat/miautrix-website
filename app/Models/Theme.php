@@ -32,6 +32,22 @@ class Theme extends Model
 {
     use HasFactory;
 
+    /**
+     * The CSS custom properties a special-event theme's `tokens` map may override — the only
+     * keys layouts/app.blade.php injects (E3-T4). `--menu-*` were added in E3-T8 for the
+     * desktop menubar. Keep in sync with resources/css/app.css and ThemeForm's hint.
+     *
+     * @var list<string>
+     */
+    public const DOCUMENTED_TOKEN_KEYS = [
+        '--background', '--foreground', '--card', '--card-foreground',
+        '--primary', '--on-primary', '--secondary', '--on-secondary',
+        '--accent', '--accent-text', '--on-accent',
+        '--muted', '--muted-foreground', '--border',
+        '--destructive', '--on-destructive', '--ring',
+        '--menu-bg', '--menu-border', '--menu-shadow', '--menu-highlight',
+    ];
+
     protected $fillable = [
         'key',
         'name',
