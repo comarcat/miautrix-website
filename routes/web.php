@@ -18,6 +18,7 @@ use App\Http\Controllers\Public\ShareRedirectController;
 use App\Http\Controllers\Public\SitemapController;
 use App\Http\Controllers\Public\SkillsController;
 use App\Http\Controllers\Public\ThemeController;
+use App\Http\Controllers\Public\WhoamiController;
 use Illuminate\Support\Facades\Route;
 
 // The real design system's home page (E4-T4, §9 step 22) — replaces the step-5 hello-world
@@ -72,6 +73,10 @@ Route::get('/blog/{slug}/pdf', ArticlePdfController::class)->name('blog.pdf');
 // never enter the HTML page cache. 404s unless the project is published AND $media is one
 // of that project's own project_files.
 Route::get('/projects/{project}/files/{media}', ProjectFileDownloadController::class)->name('projects.file');
+
+// Phase 2 (E5-T4) — the terminal widget's whoami payload (backlog item 4). OUTSIDE
+// cache.public: it must reflect the actual requester's own IP/UA on every hit.
+Route::get('/whoami', WhoamiController::class)->name('whoami.show');
 
 // BUG FIXED (found investigating a secscanner.app report): /contact used to sit inside the
 // cache.public group above, directly contradicting that group's own comment ("EXCEPT ... and

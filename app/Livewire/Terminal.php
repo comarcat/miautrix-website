@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Http\Middleware\ResolveTheme;
+use App\Support\Geo\GeoLocator;
 use App\Support\Theming\ThemeResolver;
 use Illuminate\Support\Facades\Cookie;
 use Livewire\Component;
@@ -124,9 +125,28 @@ class Terminal extends Component
         $this->redirect(route($routeName));
     }
 
+    /**
+     * E5-T4 — renders the same payload GET /whoami returns. `location` prints 'unavailable'
+     * when GeoLocator has no .mmdb to read (or the IP isn't found in it); `gps` stays a
+     * static placeholder here — only the visitor's own browser can grant or deny that
+     * permission, so there is nothing for a server-rendered command to report without a
+     * client round-trip this task doesn't add.
+     */
     private function whoamiText(): string
     {
-        return 'IP: ' . request()->ip() . ' (full lookup: /whoami)';
+        $ip = (string) request()->ip();
+        $geo = app(GeoLocator::class);
+
+        $location = implode(', ', array_filter([$geo->city($ip), $geo->region($ip), $geo->country($ip)]));
+
+        return implode("\n", [
+            "ip: {$ip}",
+            'isp: ' . ($geo->isp($ip) ?? 'unavailable'),
+            'location: ' . ($location !== '' ? $location : 'unavailable'),
+            'ua: ' . request()->userAgent(),
+            'gps: not requested (ask your browser for that)',
+            '(full payload: /whoami)',
+        ]);
     }
 
     /**

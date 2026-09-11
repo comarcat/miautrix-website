@@ -129,6 +129,16 @@ class SecurityHeaders
     private const PERMISSIONS_POLICY = 'camera=(), microphone=(), geolocation=(), payment=(), '
         . 'usb=(), browsing-topics=(), attribution-reporting=()';
 
+    /**
+     * Phase 2 (E5-T4, §9 step 38) — the terminal widget's `whoami` command offers a real
+     * browser geolocation prompt (gps, client-side only — this app never receives coordinates
+     * server-side unless the visitor's own JS sends them). `(self)` allows that prompt only
+     * on this origin's own pages, never as a third-party embed. /admin keeps the blanket
+     * `geolocation=()` above — nothing in the panel ever needs it.
+     */
+    private const PERMISSIONS_POLICY_PUBLIC = 'camera=(), microphone=(), geolocation=(self), payment=(), '
+        . 'usb=(), browsing-topics=(), attribution-reporting=()';
+
     public function handle(Request $request, Closure $next): Response
     {
         // Generated before $next() runs so it's available to Vite's own @vite() output and
@@ -164,7 +174,10 @@ class SecurityHeaders
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
-        $response->headers->set('Permissions-Policy', self::PERMISSIONS_POLICY);
+        $response->headers->set(
+            'Permissions-Policy',
+            $isAdmin ? self::PERMISSIONS_POLICY : self::PERMISSIONS_POLICY_PUBLIC,
+        );
         $response->headers->set('Cross-Origin-Opener-Policy', 'same-origin');
         $response->headers->set('Cross-Origin-Resource-Policy', 'same-origin');
         $response->headers->set('Cross-Origin-Embedder-Policy', 'require-corp');
