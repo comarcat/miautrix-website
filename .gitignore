@@ -32,6 +32,9 @@ Thumbs.db
 # Local infrastructure state and generated release artifacts
 /infra/.state
 /storage/app/private-media
+# Phase 2 (E5-T2) — the GeoLite2-City .mmdb is an un-committed operator prerequisite
+# (config/geoip.php, GEOIP_DATABASE_PATH); GeoLocator is null-safe without it.
+/storage/app/geoip
 /storage/backups
 *.tar.gz
 
