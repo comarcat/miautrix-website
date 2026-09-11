@@ -82,19 +82,19 @@ class ConnectGroupedTest extends TestCase
         $profile = $this->profile();
 
         foreach (['technical', 'matrix'] as $theme) {
-            Cache::put("public-page:{$theme}:connect", 'stale', 600);
+            Cache::put("public-page:127.0.0.1:{$theme}:connect", 'stale', 600);
         }
         SocialProfileGroup::factory()->create();
         foreach (['technical', 'matrix'] as $theme) {
-            $this->assertFalse(Cache::has("public-page:{$theme}:connect"), "group save left {$theme} stale");
+            $this->assertFalse(Cache::has("public-page:127.0.0.1:{$theme}:connect"), "group save left {$theme} stale");
         }
 
         foreach (['technical', 'matrix'] as $theme) {
-            Cache::put("public-page:{$theme}:connect", 'stale', 600);
+            Cache::put("public-page:127.0.0.1:{$theme}:connect", 'stale', 600);
         }
         $this->socialProfile($profile, 'LinkedIn', null);
         foreach (['technical', 'matrix'] as $theme) {
-            $this->assertFalse(Cache::has("public-page:{$theme}:connect"), "profile save left {$theme} stale");
+            $this->assertFalse(Cache::has("public-page:127.0.0.1:{$theme}:connect"), "profile save left {$theme} stale");
         }
     }
 

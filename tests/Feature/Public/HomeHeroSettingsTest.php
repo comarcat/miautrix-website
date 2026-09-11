@@ -44,11 +44,11 @@ class HomeHeroSettingsTest extends TestCase
     public function test_saving_a_setting_invalidates_the_home_pages_cache_entry_immediately(): void
     {
         $this->get(route('home'))->assertSee('Building reliable systems, end to end.');
-        $this->assertTrue(Cache::has('public-page:technical:/'));
+        $this->assertTrue(Cache::has('public-page:127.0.0.1:technical:/'));
 
         Setting::put('home_hero_heading', 'Edited from the admin console.');
 
-        $this->assertFalse(Cache::has('public-page:technical:/'));
+        $this->assertFalse(Cache::has('public-page:127.0.0.1:technical:/'));
         $this->get(route('home'))->assertSee('Edited from the admin console.');
     }
 }

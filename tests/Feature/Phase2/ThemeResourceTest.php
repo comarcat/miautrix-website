@@ -69,8 +69,8 @@ class ThemeResourceTest extends TestCase
     public function test_saving_or_deleting_a_theme_busts_the_whole_public_page_cache(): void
     {
         $keys = [
-            'public-page:technical:/',
-            'public-page:matrix:projects',
+            'public-page:127.0.0.1:technical:/',
+            'public-page:127.0.0.1:matrix:projects',
             'public-page:miautrix.tech:technical:blog',
             'public-page:www.miautrix.tech:matrix:skills',
         ];

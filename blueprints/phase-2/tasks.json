@@ -592,7 +592,7 @@
    "app/Actions/Cache/InvalidatePublicPageCache.php",
    "tests/Feature/Phase2/CacheKeyHostSegmentTest.php"
   ],
-  "status": "pending"
+  "status": "done"
  },
  {
   "id": "E3-T7",
