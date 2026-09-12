@@ -81,4 +81,30 @@ class AnalyticsDashboardTest extends TestCase
     {
         $this->assertTrue(config('site.analytics.record_page_views'));
     }
+
+    /**
+     * Regression test for three real bugs the sponsor found live on the deployed dashboard:
+     * (1) the widget heading was written as a literal "&amp;" string, which Blade's own
+     * auto-escaping then escaped a SECOND time into a visible "&amp;amp;" — reported as "an
+     * error on the title"; (2) the home page's path is stored as "/" (Laravel's own
+     * Request::path() convention), and the view unconditionally prepended another "/",
+     * rendering the home row as "// <count>" instead of "/ <count>"; (3) the channel
+     * breakdown's third bucket is a literal, unexplained "other" — every non-home, non-blog,
+     * non-Life page — reported as "not saying what is being show[n]."
+     */
+    public function test_the_dashboard_has_no_leaked_html_entities_a_double_slash_or_an_unexplained_other_label(): void
+    {
+        PageView::factory()->create(['path' => '/', 'channel' => 'professional']);
+        PageView::factory()->create(['path' => 'about', 'channel' => 'other']);
+
+        $html = (string) $this->actingAs($this->superAdmin())
+            ->get(Analytics::getUrl(['days' => 0]))
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringNotContainsString('&amp;amp;', $html);
+        $this->assertStringContainsString('Top paths &amp; referrers', $html);
+        $this->assertDoesNotMatchRegularExpression('/\/\/\s*<\/span>/', $html);
+        $this->assertStringContainsString('Other pages', $html);
+    }
 }
