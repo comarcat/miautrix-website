@@ -16,11 +16,18 @@ class ProjectController extends Controller
 {
     public function index(Request $request): View
     {
+        // BUG FIXED (found via a real, reproducible CI failure — DeliveryMetricsUiTest,
+        // random order seed 1789180325): no final tiebreaker meant two projects tied on both
+        // featured and sort_order got whatever order Postgres felt like on a given query plan,
+        // non-deterministic and liable to flip between runs (and between requests, on a real
+        // production listing, for any visitor with two such rows). `id` is stable and unique,
+        // so it can always break the tie the same way every time.
         $query = Project::query()
             ->where('published', true)
             ->with('projectCategory')
             ->orderByDesc('featured')
-            ->orderBy('sort_order');
+            ->orderBy('sort_order')
+            ->orderBy('id');
 
         $categorySlug = $request->query('category');
         $activeCategory = null;
