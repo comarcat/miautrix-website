@@ -18,7 +18,7 @@
             x-show="open"
             x-cloak
             x-transition
-            class="flex h-56 flex-col rounded-card border border-border bg-card p-3 font-mono text-mono text-foreground shadow-elevation-2"
+            class="flex h-[28rem] flex-col rounded-card border border-border bg-card p-3 font-mono text-mono text-foreground shadow-elevation-2"
         >
             {{-- BUG FIXED (found live: "should move to the last line created like a real
                  terminal"): new output used to just append below the fold with no auto-scroll,
