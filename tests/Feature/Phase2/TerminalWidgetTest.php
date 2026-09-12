@@ -64,6 +64,34 @@ class TerminalWidgetTest extends TestCase
             ->assertDontSee('life');
     }
 
+    /**
+     * Regression test for a real bug found live (reported as "no under the dir command"):
+     * CR-P2-13 (Tools) and CR-P2-15 (Endorsements) both shipped working public routes that
+     * were never added to Terminal::PAGES, so a visitor typing `dir` had no way to discover
+     * either page existed.
+     */
+    public function test_dir_lists_tools_and_endorsements(): void
+    {
+        Livewire::test(Terminal::class)
+            ->set('input', 'dir')
+            ->call('run')
+            ->assertSee('tools')
+            ->assertSee('endorsements');
+    }
+
+    public function test_cd_tools_and_cd_endorsements_redirect_to_the_right_pages(): void
+    {
+        Livewire::test(Terminal::class)
+            ->set('input', 'cd tools')
+            ->call('run')
+            ->assertRedirect(route('tools.index'));
+
+        Livewire::test(Terminal::class)
+            ->set('input', 'cd endorsements')
+            ->call('run')
+            ->assertRedirect(route('endorsements.index'));
+    }
+
     public function test_the_admin_panel_never_mounts_the_terminal_widget(): void
     {
         $admin = User::factory()->withTwoFactor()->create();

@@ -34,6 +34,22 @@ class NavMenuA11yTest extends TestCase
         }
     }
 
+    /**
+     * Regression test for a real bug found live (reported as "on the admin but not showing
+     * on the website," confirmed missing from the terminal's `dir` command too): CR-P2-13
+     * (Tools) and CR-P2-15 (Endorsements) both shipped working public routes that were never
+     * linked from this menu at all — reachable only to a visitor who already knew the exact
+     * URL.
+     */
+    public function test_the_menubar_exposes_the_phase2_tools_and_endorsements_pages(): void
+    {
+        $html = $this->get(route('home'))->assertOk()->getContent();
+
+        foreach ([route('tools.index'), route('endorsements.index')] as $href) {
+            $this->assertStringContainsString('href="' . $href . '"', $html, "menu is missing {$href}");
+        }
+    }
+
     public function test_submenu_triggers_carry_haspopup_and_escape_focus_wiring(): void
     {
         $html = $this->get(route('home'))->assertOk()->getContent();

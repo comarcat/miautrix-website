@@ -32,11 +32,18 @@
         ? (bool) (\App\Models\Theme::where('key', $theme)->value('shows_life_blog') ?? ($theme === 'matrix'))
         : $theme === 'matrix';
 
+    // BUG FIXED (found live, reported as "on the admin but not showing on the website" and
+    // confirmed missing from the terminal's own `dir` command too): CR-P2-13 (Tools) and
+    // CR-P2-15 (Endorsements/testimonials) both shipped with working public routes, but
+    // neither was ever added to this nav or to Terminal::PAGES (app/Livewire/Terminal.php) —
+    // both pages were reachable only if a visitor already knew the exact URL, with no link
+    // anywhere on the site pointing at either one.
     $groups = [
         'Work' => [
             ['label' => 'Experience', 'href' => route('experience')],
             ['label' => 'Skills', 'href' => route('skills')],
             ['label' => 'Projects', 'href' => route('projects.index')],
+            ['label' => 'Tools', 'href' => route('tools.index')],
             ['label' => 'Resume', 'href' => route('resume')],
         ],
         'Writing' => array_filter([
@@ -48,6 +55,7 @@
     $links = [
         ['label' => 'About', 'href' => route('about')],
         ['label' => 'Connect', 'href' => route('connect')],
+        ['label' => 'Endorsements', 'href' => route('endorsements.index')],
         ['label' => 'Contact', 'href' => route('contact')],
     ];
 

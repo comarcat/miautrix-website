@@ -26,16 +26,25 @@ class Terminal extends Component
 
     public bool $open = false;
 
-    /** @var array<string, string> page name => route name */
+    /**
+     * BUG FIXED (found live, reported as "no under the dir command"): CR-P2-13 (Tools) and
+     * CR-P2-15 (Endorsements) both shipped with working public routes that were never added
+     * here, so `dir`/`ls`/`cd` had no idea either page existed — the same gap fixed in
+     * nav-menu.blade.php's own $groups/$links, which had never linked to them either.
+     *
+     * @var array<string, string> page name => route name
+     */
     private const PAGES = [
         'home' => 'home',
         'about' => 'about',
         'experience' => 'experience',
         'skills' => 'skills',
         'projects' => 'projects.index',
+        'tools' => 'tools.index',
         'resume' => 'resume',
         'blog' => 'blog.index',
         'connect' => 'connect',
+        'endorsements' => 'endorsements.index',
         'contact' => 'contact',
     ];
 
