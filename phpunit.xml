@@ -51,7 +51,14 @@
         <env force="true" name="DB_PORT" value="5432"/>
         <env force="true" name="DB_DATABASE" value="miautrix_test"/>
         <env force="true" name="DB_USERNAME" value="miau_db"/>
-        <env force="true" name="DB_PASSWORD" value="Miausito2024"/>
+        <!-- BUG FIXED (found live, 2026-09-13, during a real DB password rotation): this used
+             to hardcode force="true" value="<the real password>" — a tracked, committed file,
+             so the password ends up permanently readable in git history/blame the moment it's
+             committed, rotated or not. DB_PASSWORD is deliberately absent from this file
+             entirely now: with no <env> entry for it at all, PHPUnit never touches it, so it
+             flows through from whichever real, local, never-committed .env this machine's PHP
+             process actually boots with — the same way it already works for the app outside
+             of tests. -->
 
         <env force="true" name="CACHE_STORE" value="array"/>
         <env force="true" name="SESSION_DRIVER" value="array"/>
